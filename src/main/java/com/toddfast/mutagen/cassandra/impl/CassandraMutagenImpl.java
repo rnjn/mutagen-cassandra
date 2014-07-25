@@ -125,48 +125,13 @@ public class CassandraMutagenImpl implements CassandraMutagen {
 		new Comparator<String>() {
 			@Override
 			public int compare(String path1, String path2) {
-				final String origPath1=path1;
-				final String origPath2=path2;
-
-				try {
-
-					int index1=path1.lastIndexOf("/");
-					int index2=path2.lastIndexOf("/");
-
-					String file1;
-					if (index1!=-1) {
-						file1=path1.substring(index1+1);
-					}
-					else {
-						file1=path1;
-					}
-
-					String file2;
-					if (index2!=-1) {
-						file2=path2.substring(index2+1);
-					}
-					else {
-						file2=path2;
-					}
-
-					index1=file1.lastIndexOf(".");
-					index2=file2.lastIndexOf(".");
-
-					if (index1 > 1) {
-						file1=file1.substring(0,index1);
-					}
-
-					if (index2 > 1) {
-						file2=file2.substring(0,index2);
-					}
-
-					return file1.compareTo(file2);
-				}
-				catch (StringIndexOutOfBoundsException e) {
-					throw new StringIndexOutOfBoundsException(e.getMessage()+
-						" (path1: \""+origPath1+
-						"\", path2: \""+origPath2+"\")");
-				}
+				File file1 = new File(path1);
+				File file2 = new File(path2);
+				
+				String filename1 = file1.getName();
+				String filename2 = file2.getName();
+				return filename1.compareTo(filename2);
+				
 			}
 		};
 
