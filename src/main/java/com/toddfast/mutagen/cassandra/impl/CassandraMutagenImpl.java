@@ -11,13 +11,18 @@ import com.toddfast.mutagen.basic.ResourceScanner;
 import com.toddfast.mutagen.cassandra.CassandraCoordinator;
 import com.toddfast.mutagen.cassandra.CassandraMutagen;
 import com.toddfast.mutagen.cassandra.CassandraSubject;
+
+import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Pattern;
+import org.apache.commons.io.FilenameUtils;
 
 /**
  *
@@ -55,7 +60,7 @@ public class CassandraMutagenImpl implements CassandraMutagen {
 				System.out.println("Found mutation resource \""+resource+"\"");
 
 				if (resource.endsWith(".class")) {
-					// Remove the file path
+					resource = FilenameUtils.separatorsToUnix(resource);
 					resource=resource.substring(
 						resource.indexOf(rootResourcePath));
 					if (resource.contains("$")) {
