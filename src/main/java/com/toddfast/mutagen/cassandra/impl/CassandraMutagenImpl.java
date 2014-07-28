@@ -31,10 +31,21 @@ import org.apache.commons.io.FilenameUtils;
  */
 //@ServiceProvider(scope=Scope.CLIENT_MANAGED)
 public class CassandraMutagenImpl implements CassandraMutagen {
+	
+	private List<String> resources;
+	
+	
+	/**
+	 * List contains resources in sorted order of version
+	 *
+	 */
+	public List<String> getResources() {
+		return resources;
+	}
 
 	/**
-	 * 
-	 * 
+	 * Find all cassandra version files given a root
+	 * resource path to search.
 	 */
 	@Override
 	public void initialize(String rootResourcePath)
@@ -60,6 +71,8 @@ public class CassandraMutagenImpl implements CassandraMutagen {
 				System.out.println("Found mutation resource \""+resource+"\"");
 
 				if (resource.endsWith(".class")) {
+					// Framework depends on unix style file paths for proper
+					// class loading.
 					resource = FilenameUtils.separatorsToUnix(resource);
 					resource=resource.substring(
 						resource.indexOf(rootResourcePath));
@@ -68,7 +81,6 @@ public class CassandraMutagenImpl implements CassandraMutagen {
 						continue;
 					}
                 }
-
 				resources.add(resource);
 			}
 		}
@@ -78,20 +90,6 @@ public class CassandraMutagenImpl implements CassandraMutagen {
 		}
 	}
 
-
-	/**
-	 *
-	 *
-	 */
-	public List<String> getResources() {
-		return resources;
-	}
-
-
-	/**
-	 *
-	 *
-	 */
 	@Override
 	public Plan.Result<Integer> mutate(Keyspace keyspace) {
 		// Do this in a VM-wide critical section. External cluster-wide 
@@ -110,13 +108,6 @@ public class CassandraMutagenImpl implements CassandraMutagen {
 		}
 	}
 
-
-
-
-	////////////////////////////////////////////////////////////////////////////
-	// Fields
-	////////////////////////////////////////////////////////////////////////////
-
 	/**
 	 * Sorts by root file name, ignoring path and file extension
 	 *
@@ -134,7 +125,4 @@ public class CassandraMutagenImpl implements CassandraMutagen {
 				
 			}
 		};
-
-//	@AllowField
-	private List<String> resources;
 }
