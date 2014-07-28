@@ -7,30 +7,39 @@ import com.toddfast.mutagen.MutagenException;
 import com.toddfast.mutagen.Mutation;
 import com.toddfast.mutagen.State;
 import com.toddfast.mutagen.basic.SimpleState;
+
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+
+import org.apache.commons.codec.binary.Hex;
 
 /**
  *
  * @author Todd Fast
  */
 public abstract class AbstractCassandraMutation implements Mutation<Integer> {
+	
+	private Keyspace keyspace;
 
-	/**
-	 *
-	 *
-	 */
 	protected AbstractCassandraMutation(Keyspace keyspace) {
 		super();
 		this.keyspace=keyspace;
 	}
-
+	
+	protected Keyspace getKeyspace() {
+		return keyspace;
+	}
+	
+	@Override
+	public abstract State<Integer> getResultingState();
 
 	/**
-	 *
+	 * Return a canonical representative of the change in string form
 	 *
 	 */
+	protected abstract String getChangeSummary();
+
 	@Override
 	public String toString() {
 		if (getResultingState()!=null) {
@@ -41,10 +50,10 @@ public abstract class AbstractCassandraMutation implements Mutation<Integer> {
 		}
 	}
 
-
 	/**
-	 *
-	 *
+	 * 
+	 * @param resourceName
+	 * @return
 	 */
 	protected final State<Integer> parseVersion(String resourceName) {
 		String versionString=resourceName;
@@ -78,36 +87,11 @@ public abstract class AbstractCassandraMutation implements Mutation<Integer> {
 		return new SimpleState<Integer>(Integer.parseInt(buffer.toString()));
 	}
 
-
-	/**
-	 *
-	 *
-	 */
-	protected Keyspace getKeyspace() {
-		return keyspace;
-	}
-
-
 	/**
 	 * Perform the actual mutation
 	 *
 	 */
 	protected abstract void performMutation(Context context);
-
-
-	/**
-	 *
-	 *
-	 */
-	@Override
-	public abstract State<Integer> getResultingState();
-
-
-	/**
-	 * Return a canonical representative of the change in string form
-	 *
-	 */
-	protected abstract String getChangeSummary();
 
 
 	/**
@@ -151,69 +135,23 @@ public abstract class AbstractCassandraMutation implements Mutation<Integer> {
 				"column family to state "+version+
 				"; schema is now out of sync with recorded version",e);
 		}
-
-// TAF: Why does this fail with a StaleLockException? Do we need to use a
-// separate lock table?
-
-//		// Attempt to acquire a lock to update the version
-//		ColumnPrefixDistributedRowLock<String> lock =
-//			new ColumnPrefixDistributedRowLock<String>(getKeyspace(),
-//					CassandraSubject.VERSION_CF,CassandraSubject.VERSION_COLUMN)
-//				.withBackoff(new BoundedExponentialBackoff(250, 10000, 10))
-//				.expireLockAfter(1, TimeUnit.SECONDS)
-////				.failOnStaleLock(false);
-//				.failOnStaleLock(true);
-//
-//		try {
-//			lock.acquire();
-//		}
-//		catch (StaleLockException e) {
-//			// Won't happen
-//			throw new MutagenException("Could not update "+
-//				"\"schema_version\" column family to state "+version+
-//				" because lock expired",e);
-//		}
-//		catch (BusyLockException e) {
-//			throw new MutagenException("Could not update "+
-//				"\"schema_version\" column family to state "+version+
-//				" because another client is updating the recorded version",e);
-//		}
-//		catch (Exception e) {
-//			if (e instanceof RuntimeException) {
-//				throw (RuntimeException)e;
-//			}
-//			else {
-//				throw new MutagenException("Could not update "+
-//					"\"schema_version\" column family to state "+version+
-//					" because a write lock could not be obtained",e);
-//			}
-//		}
-//		finally {
-//			try {
-//				MutationBatch batch=getKeyspace().prepareMutationBatch();
-//				batch.withRow(CassandraSubject.VERSION_CF,
-//						CassandraSubject.ROW_KEY)
-//					.putColumn(CassandraSubject.VERSION_COLUMN,version);
-//
-//				// Release and update
-//				lock.releaseWithMutation(batch);
-//			}
-//			catch (Exception e) {
-//				if (e instanceof RuntimeException) {
-//					throw (RuntimeException)e;
-//				}
-//				else {
-//					throw new MutagenException("Could not update "+
-//						"\"schema_version\" column family to state "+version+
-//						"; schema is now out of sync with recorded version",e);
-//				}
-//			}
-//		}
+	}
+	
+	/**
+	 * Returns a md5 string in Hex format
+	 *
+	 * @param key
+	 * @return
+	 */
+	public static String md5String(String key) {
+		
+		byte[] theDigest = md5(key);
+		
+		return Hex.encodeHexString(theDigest);
 	}
 
-
 	/**
-	 *
+	 * Generates an md5 hash
 	 *
 	 * @param key
 	 * @return
@@ -236,50 +174,7 @@ public abstract class AbstractCassandraMutation implements Mutation<Integer> {
 			throw new RuntimeException(ex);
 		}
 
-		byte[] messageDigest=algorithm.digest();
-		return messageDigest;
+		byte[] theDigest=algorithm.digest();
+		return theDigest;
 	}
-
-
-	/**
-	 *
-	 *
-	 * @param key
-	 * @return
-	 */
-	public static String md5String(String key) {
-		byte[] messageDigest=md5(key);
-		return toHex(messageDigest);
-	}
-
-
-	/**
-	 * Encode a byte array as a hexadecimal string
-	 *
-	 * @param	bytes
-	 * @return
-	 */
-	public static String toHex(byte[] bytes) {
-		StringBuilder hexString=new StringBuilder();
-		for (int i=0; i<bytes.length; i++) {
-
-			String hex=Integer.toHexString(0xFF & bytes[i]);
-			if (hex.length() == 1) {
-				hexString.append('0');
-			}
-
-			hexString.append(hex);
-		}
-
-		return hexString.toString();
-	}
-
-
-
-
-	////////////////////////////////////////////////////////////////////////////
-	// Fields
-	////////////////////////////////////////////////////////////////////////////
-
-	private Keyspace keyspace;
 }
