@@ -32,7 +32,7 @@ import org.apache.commons.io.FilenameUtils;
 //@ServiceProvider(scope=Scope.CLIENT_MANAGED)
 public class CassandraMutagenImpl implements CassandraMutagen {
 	
-	private List<String> resources;
+	private List<String> resources = new ArrayList<String>();
 	
 	
 	/**
@@ -42,7 +42,7 @@ public class CassandraMutagenImpl implements CassandraMutagen {
 	public List<String> getResources() {
 		return resources;
 	}
-
+	
 	/**
 	 * Find all cassandra version files given a root
 	 * resource path to search.
@@ -64,8 +64,6 @@ public class CassandraMutagenImpl implements CassandraMutagen {
 			}
 
 			Collections.sort(discoveredResources,COMPARATOR);
-
-			resources=new ArrayList<String>();
 
 			for (String resource: discoveredResources) {
 				System.out.println("Found mutation resource \""+resource+"\"");

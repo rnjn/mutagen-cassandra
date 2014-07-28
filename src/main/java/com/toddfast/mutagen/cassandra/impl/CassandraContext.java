@@ -12,21 +12,18 @@ import org.slf4j.LoggerFactory;
  * @author Todd Fast
  */
 public class CassandraContext implements Mutation.Context {
+	
+	private Subject<?> subject;
+	
+	private Coordinator<?> coordinator;
+	
+	private Logger logger;
 
-	/**
-	 *
-	 *
-	 */
 	public CassandraContext(Subject<?> subject, Coordinator<?> coordinator) {
 		this(subject,coordinator,
 			LoggerFactory.getLogger(CassandraContext.class));
 	}
 
-
-	/**
-	 *
-	 *
-	 */
 	public CassandraContext(Subject<?> subject, Coordinator<?> coordinator,
 			Logger logger) {
 		super();
@@ -35,64 +32,29 @@ public class CassandraContext implements Mutation.Context {
 		this.logger=logger;
 	}
 
-
-	/**
-	 *
-	 *
-	 */
 	@Override
 	public Subject<?> getSubject() {
 		return subject;
 	}
 
-
-	/**
-	 *
-	 *
-	 */
 	@Override
 	public Coordinator<?> getCoordinator() {
 		return coordinator;
 	}
 
-
-	/**
-	 *
-	 *
-	 */
 	@Override
 	public void info(String message, Object... parameters) {
 		logger.info(message,parameters);
 	}
 
-
-	/**
-	 *
-	 *
-	 */
 	@Override
 	public void debug(String message, Object... parameters) {
 		logger.debug(message,parameters);
 	}
 
-
-	/**
-	 *
-	 *
-	 */
 	@Override
 	public void error(String message, Object... parameters) {
 		logger.error(message,parameters);
 	}
 
-
-
-
-	////////////////////////////////////////////////////////////////////////////
-	// Fields
-	////////////////////////////////////////////////////////////////////////////
-
-	private Subject<?> subject;
-	private Coordinator<?> coordinator;
-	private Logger logger;
 }

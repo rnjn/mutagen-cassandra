@@ -21,31 +21,28 @@ import java.util.List;
  */
 public class CQLMutation extends AbstractCassandraMutation {
 
-	/**
-	 * 
-	 * 
-	 */
+	private String source;
+	
+	private State<Integer> state;
+	
+	private List<String> statements=new ArrayList<String>();
+
 	public CQLMutation(Keyspace keyspace, String resourceName) {
 		super(keyspace);
 		state=super.parseVersion(resourceName);
 		loadCQLStatements(resourceName);
 	}
 
-
-	/**
-	 *
-	 *
-	 */
 	@Override
 	protected String getChangeSummary() {
 		return source;
 	}
+	
+	@Override
+	public State<Integer> getResultingState() {
+		return state;
+	}
 
-
-	/**
-	 *
-	 *
-	 */
 	private void loadCQLStatements(String resourceName) {
 
 		try {
@@ -165,17 +162,6 @@ public class CQLMutation extends AbstractCassandraMutation {
 		return result;
 	}
 
-
-	/**
-	 *
-	 *
-	 */
-	@Override
-	public State<Integer> getResultingState() {
-		return state;
-	}
-
-
 	/**
 	 *
 	 *
@@ -207,15 +193,4 @@ public class CQLMutation extends AbstractCassandraMutation {
 		}
 		context.debug("Done executing mutation {}",state.getID());
 	}
-
-
-
-
-	////////////////////////////////////////////////////////////////////////////
-	// Fields
-	////////////////////////////////////////////////////////////////////////////
-
-	private String source;
-	private State<Integer> state;
-	private List<String> statements=new ArrayList<String>();
 }

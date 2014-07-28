@@ -19,11 +19,21 @@ import com.toddfast.mutagen.basic.SimpleState;
  * @author Todd Fast
  */
 public class CassandraSubject implements Subject<Integer> {
+	
+	private Keyspace keyspace;
+	
+	public static final ColumnFamily<String,String> VERSION_CF=
+			ColumnFamily.newColumnFamily(
+				"schema_version",
+				StringSerializer.get(),
+				StringSerializer.get(),
+				ByteBufferSerializer.get());
+	
+	public static final String ROW_KEY="state";
+		
+	public static final String VERSION_COLUMN="version";
 
-	/**
-	 *
-	 *
-	 */
+
 	public CassandraSubject(Keyspace keyspace) {
 		super();
 		if (keyspace==null) {
@@ -34,11 +44,6 @@ public class CassandraSubject implements Subject<Integer> {
 		this.keyspace=keyspace;
 	}
 
-
-	/**
-	 *
-	 *
-	 */
 	public Keyspace getKeyspace() {
 		return keyspace;
 	}
@@ -67,6 +72,7 @@ public class CassandraSubject implements Subject<Integer> {
 				.getKey(ROW_KEY);
 
 		OperationResult<ColumnList<String>> result=null;
+		
 		try {
 			result=query.execute();
 		}
@@ -100,22 +106,4 @@ public class CassandraSubject implements Subject<Integer> {
 
 		return new SimpleState<Integer>(version);
 	}
-
-
-
-
-	////////////////////////////////////////////////////////////////////////////
-	// Fields
-	////////////////////////////////////////////////////////////////////////////
-
-	public static final ColumnFamily<String,String> VERSION_CF=
-		ColumnFamily.newColumnFamily(
-			"schema_version",
-			StringSerializer.get(),
-			StringSerializer.get(),
-			ByteBufferSerializer.get());
-	public static final String ROW_KEY="state";
-	public static final String VERSION_COLUMN="version";
-
-	private Keyspace keyspace;
 }

@@ -13,11 +13,15 @@ import com.toddfast.mutagen.Subject;
  * @author Todd Fast
  */
 public class CassandraCoordinator implements Coordinator<Integer> {
-
-	/**
-	 * 
-	 * 
-	 */
+	
+	private Keyspace keyspace;
+	
+	public static final ColumnFamily<String,String> VERSION_CF=
+			ColumnFamily.newColumnFamily(
+				"schema_version",
+				StringSerializer.get(),
+				StringSerializer.get());
+	
 	public CassandraCoordinator(Keyspace keyspace) {
 		super();
 		if (keyspace==null) {
@@ -27,19 +31,13 @@ public class CassandraCoordinator implements Coordinator<Integer> {
 
 		this.keyspace=keyspace;
 	}
-
-
-	/**
-	 *
-	 *
-	 */
+	
 	public Keyspace getKeyspace() {
 		return keyspace;
 	}
 
-
 	/**
-	 * 
+	 * Used to insure change versions are monotonically increasing
 	 * 
 	 */
 	@Override
@@ -48,19 +46,4 @@ public class CassandraCoordinator implements Coordinator<Integer> {
 		State<Integer> currentState=subject.getCurrentState();
 		return targetState.getID() > currentState.getID();
 	}
-
-
-
-
-	////////////////////////////////////////////////////////////////////////////
-	// Fields
-	////////////////////////////////////////////////////////////////////////////
-
-	public static final ColumnFamily<String,String> VERSION_CF=
-		ColumnFamily.newColumnFamily(
-			"schema_version",
-			StringSerializer.get(),
-			StringSerializer.get());
-
-	private Keyspace keyspace;
 }

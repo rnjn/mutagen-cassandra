@@ -19,20 +19,12 @@ import java.util.List;
  */
 public class CassandraPlanner extends BasicPlanner<Integer> {
 
-	/**
-	 *
-	 *
-	 */
 	protected CassandraPlanner(Keyspace keyspace, 
 			List<String> mutationResources) {
 		super(loadMutations(keyspace,mutationResources),null);
 	}
 
 
-	/**
-	 *
-	 *
-	 */
 	private static List<Mutation<Integer>> loadMutations(
 			Keyspace keyspace, Collection<String> resources) {
 
@@ -60,11 +52,6 @@ public class CassandraPlanner extends BasicPlanner<Integer> {
 		return result;
 	}
 
-
-	/**
-	 *
-	 *
-	 */
 	private static Mutation<Integer> loadMutationClass(
 			Keyspace keyspace, String resource) {
 
@@ -131,22 +118,12 @@ public class CassandraPlanner extends BasicPlanner<Integer> {
 		}
 	}
 
-
-	/**
-	 *
-	 *
-	 */
 	@Override
 	protected Mutation.Context createContext(Subject<Integer> subject,
 		Coordinator<Integer> coordinator) {
 		return new CassandraContext(subject,coordinator);
 	}
 
-
-	/**
-	 *
-	 * 
-	 */
 	@Override
 	public Plan<Integer> getPlan(Subject<Integer> subject,
 			Coordinator<Integer> coordinator) {
