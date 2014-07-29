@@ -8,7 +8,7 @@ import com.netflix.astyanax.serializers.StringSerializer;
 import com.toddfast.mutagen.MutagenException;
 import com.toddfast.mutagen.State;
 import com.toddfast.mutagen.basic.SimpleState;
-import com.toddfast.mutagen.cassandra.AbstractCassandraMutation;
+import com.toddfast.mutagen.cassandra.mutation.AbstractCassandraMutation;
 
 /**
  *

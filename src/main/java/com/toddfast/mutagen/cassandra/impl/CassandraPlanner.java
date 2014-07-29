@@ -7,6 +7,8 @@ import com.toddfast.mutagen.Mutation;
 import com.toddfast.mutagen.Plan;
 import com.toddfast.mutagen.Subject;
 import com.toddfast.mutagen.basic.BasicPlanner;
+import com.toddfast.mutagen.cassandra.mutation.CQLMutation;
+
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
