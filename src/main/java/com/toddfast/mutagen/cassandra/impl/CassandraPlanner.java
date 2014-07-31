@@ -8,6 +8,7 @@ import com.toddfast.mutagen.Plan;
 import com.toddfast.mutagen.Subject;
 import com.toddfast.mutagen.basic.BasicPlanner;
 import com.toddfast.mutagen.cassandra.mutation.CQLMutation;
+import com.toddfast.mutagen.cassandra.mutation.CSVMutation;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -37,13 +38,11 @@ public class CassandraPlanner extends BasicPlanner<Integer> {
 			// Allow .sql files because some editors have syntax highlighting
 			// for SQL but not CQL
 			if (resource.endsWith(".cql") || resource.endsWith(".sql")) {
-				result.add(
-					new CQLMutation(keyspace,resource));
-			}
-			else
-			if (resource.endsWith(".class")) {
-				result.add(
-					loadMutationClass(keyspace,resource));
+				result.add(new CQLMutation(keyspace,resource));
+			} else if (resource.endsWith(".csv")) {
+				result.add(new CSVMutation(keyspace, resource));
+			} else if (resource.endsWith(".class")) {
+				result.add(loadMutationClass(keyspace,resource));
 			}
 			else {
 				throw new IllegalArgumentException("Unknown type for "+

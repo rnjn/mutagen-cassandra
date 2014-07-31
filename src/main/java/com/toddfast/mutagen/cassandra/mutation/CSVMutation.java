@@ -12,6 +12,9 @@ import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.cql.CqlStatementResult;
+import com.netflix.astyanax.model.ColumnFamily;
+import com.netflix.astyanax.serializers.StringSerializer;
 import com.toddfast.mutagen.MutagenException;
 import com.toddfast.mutagen.State;
 import com.toddfast.mutagen.cassandra.CassandraSubject;
@@ -38,9 +41,13 @@ public class CSVMutation extends AbstractCassandraMutation {
 	
 	List<MutationBatch> batchWrites = new ArrayList<MutationBatch>();
 	
+	final ColumnFamily<String,String> CF_TEST1=
+			ColumnFamily.newColumnFamily("Test1",
+				StringSerializer.get(),StringSerializer.get());
+	
 	private static final String CSV_DELIM = ",";
 
-	protected CSVMutation(Keyspace keyspace, String resourceName) {
+	public CSVMutation(Keyspace keyspace, String resourceName) {
 		super(keyspace);
 		this.state=super.parseVersion(resourceName);
 		loadCSVData(resourceName);
@@ -108,9 +115,9 @@ public class CSVMutation extends AbstractCassandraMutation {
 		MutationBatch m = getKeyspace().prepareMutationBatch();
 		
 		// first column is the key
-		ColumnListMutation<String> listMutations = m.withRow(CassandraSubject.VERSION_CF, rowValues[0]);
 		for(int i = 1; i < columnNames.length; i++) {
-			listMutations.putColumn(columnNames[i], rowValues[i]);
+			m.withRow(CF_TEST1, rowValues[0])
+				.putColumn(columnNames[i], rowValues[i], null);
 		}
 		
 		this.batchWrites.add(m);
