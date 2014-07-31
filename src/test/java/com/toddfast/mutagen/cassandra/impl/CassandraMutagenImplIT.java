@@ -33,25 +33,115 @@ import static org.junit.Assert.*;
  * @author Todd Fast
  */
 public class CassandraMutagenImplIT {
+	
+	private static AstyanaxContext<Keyspace> context;
+	
+	private static Keyspace keyspace;
 
 	public CassandraMutagenImplIT() {
 	}
 
-
-	@BeforeClass
-	public static void setUpClass()
-			throws Exception {
+	@Before
+	public void setUp() throws ConnectionException {
 		defineKeyspace();
 		createKeyspace();
+	}
+
+
+	@After
+	public void tearDown() throws ConnectionException {
+		OperationResult<SchemaChangeResult> result=keyspace.dropKeyspace();
+		System.out.println("Dropped keyspace "+keyspace);
+	}
+
+
+	/**
+	 * This is it!
+	 *
+	 */
+	private Plan.Result<Integer> mutate()
+			throws IOException {
+
+		// Get an instance of CassandraMutagen
+		// Using Nu: CassandraMutagen mutagen=$(CassandraMutagen.class);
+		CassandraMutagen mutagen=new CassandraMutagenImpl();
+
+		// Initialize the list of mutations
+		String rootResourcePath="com/toddfast/mutagen/cassandra/test/mutations";
+		mutagen.initialize(rootResourcePath);
+
+		// Mutate!
+		Plan.Result<Integer> result=mutagen.mutate(keyspace);
+
+		return result;
+	}
+
+	@Test
+	public void testInitialize() throws Exception {
+
+		Plan.Result<Integer> result = mutate();
+
+		// Check the results
+		State<Integer> state=result.getLastState();
+
+		System.out.println("Mutation complete: "+result.isMutationComplete());
+		System.out.println("Exception: "+result.getException());
+		if (result.getException()!=null) {
+			result.getException().printStackTrace();
+		}
+		System.out.println("Completed mutations: "+result.getCompletedMutations());
+		System.out.println("Remining mutations: "+result.getRemainingMutations());
+		System.out.println("Last state: "+(state!=null ? state.getID() : "null"));
+
+		assertTrue(result.isMutationComplete());
+		assertNull(result.getException());
+		assertEquals((state!=null ? state.getID() : (Integer)(-1)),(Integer)5);
+	}
+
+
+	/**
+	 *
+	 *
+	 */
+	@Test
+	public void testData() throws Exception {
+		
+		mutate();
+		
+		final ColumnFamily<String,String> CF_TEST1=
+			ColumnFamily.newColumnFamily("Test1",
+				StringSerializer.get(),StringSerializer.get());
+
+		ColumnList<String> columns;
+		columns=keyspace.prepareQuery(CF_TEST1)
+			.getKey("row1")
+			.execute()
+			.getResult();
+
+		assertEquals("foo1",columns.getStringValue("value1",null));
+		assertEquals("bar1",columns.getStringValue("value2",null));
+
+		columns=keyspace.prepareQuery(CF_TEST1)
+			.getKey("row2")
+			.execute()
+			.getResult();
+
+		assertEquals("chickens",columns.getStringValue("value1",null));
+		assertEquals("sneezes",columns.getStringValue("value2",null));
+
+		columns=keyspace.prepareQuery(CF_TEST1)
+			.getKey("row3")
+			.execute()
+			.getResult();
+
+		assertEquals("bar",columns.getStringValue("value1",null));
+		assertEquals("baz",columns.getStringValue("value2",null));
 	}
 
 	private static void defineKeyspace() {
 		context=new AstyanaxContext.Builder()
 			.forKeyspace("mutagen_test")
 			.withAstyanaxConfiguration(new AstyanaxConfigurationImpl()
-//					.setDiscoveryType(NodeDiscoveryType.RING_DESCRIBE)
-//					.setCqlVersion("3.0.0")
-//					.setTargetCassandraVersion("1.2")
 				.setDefaultReadConsistencyLevel(ConsistencyLevel.CL_QUORUM)
 				.setDefaultWriteConsistencyLevel(ConsistencyLevel.CL_QUORUM)
 			)
@@ -67,7 +157,7 @@ public class CassandraMutagenImplIT {
 		context.start();
 		keyspace=context.getClient();
 	}
-
+	
 	private static void createKeyspace()
 			throws ConnectionException {
 
@@ -93,117 +183,4 @@ public class CassandraMutagenImplIT {
 		System.out.println("Created keyspace "+keyspace);
 	}
 
-
-	@AfterClass
-	public static void tearDownClass()
-			throws Exception {
-		OperationResult<SchemaChangeResult> result=keyspace.dropKeyspace();
-		System.out.println("Dropped keyspace "+keyspace);
-	}
-
-
-	@Before
-	public void setUp() {
-	}
-
-
-	@After
-	public void tearDown() {
-	}
-
-
-	/**
-	 * This is it!
-	 *
-	 */
-	private Plan.Result<Integer> mutate()
-			throws IOException {
-
-		// Get an instance of CassandraMutagen
-		// Using Nu: CassandraMutagen mutagen=$(CassandraMutagen.class);
-		CassandraMutagen mutagen=new CassandraMutagenImpl();
-
-		// Initialize the list of mutations
-		String rootResourcePath="com/toddfast/mutagen/cassandra/test/mutations";
-		mutagen.initialize(rootResourcePath);
-
-		// Mutate!
-		Plan.Result<Integer> result=mutagen.mutate(keyspace);
-
-		return result;
-	}
-
-
-	/**
-	 *
-	 *
-	 */
-	@Test
-	public void testInitialize() throws Exception {
-
-		Plan.Result<Integer> result = mutate();
-
-		// Check the results
-		State<Integer> state=result.getLastState();
-
-		System.out.println("Mutation complete: "+result.isMutationComplete());
-		System.out.println("Exception: "+result.getException());
-		if (result.getException()!=null) {
-			result.getException().printStackTrace();
-		}
-		System.out.println("Completed mutations: "+result.getCompletedMutations());
-		System.out.println("Remining mutations: "+result.getRemainingMutations());
-		System.out.println("Last state: "+(state!=null ? state.getID() : "null"));
-
-		assertTrue(result.isMutationComplete());
-		assertNull(result.getException());
-		assertEquals((state!=null ? state.getID() : (Integer)(-1)),(Integer)4);
-	}
-
-
-	/**
-	 *
-	 *
-	 */
-	@Test
-	public void testData() throws Exception {
-
-		final ColumnFamily<String,String> CF_TEST1=
-			ColumnFamily.newColumnFamily("Test1",
-				StringSerializer.get(),StringSerializer.get());
-
-		ColumnList<String> columns;
-		columns=keyspace.prepareQuery(CF_TEST1)
-			.getKey("row1")
-			.execute()
-			.getResult();
-
-		assertEquals("foo",columns.getStringValue("value1",null));
-		assertEquals("bar",columns.getStringValue("value2",null));
-
-		columns=keyspace.prepareQuery(CF_TEST1)
-			.getKey("row2")
-			.execute()
-			.getResult();
-
-		assertEquals("chicken",columns.getStringValue("value1",null));
-		assertEquals("sneeze",columns.getStringValue("value2",null));
-
-		columns=keyspace.prepareQuery(CF_TEST1)
-			.getKey("row3")
-			.execute()
-			.getResult();
-
-		assertEquals("bar",columns.getStringValue("value1",null));
-		assertEquals("baz",columns.getStringValue("value2",null));
-	}
-	
-	
-	
-	////////////////////////////////////////////////////////////////////////////
-	// Fields
-	////////////////////////////////////////////////////////////////////////////
-
-	private static AstyanaxContext<Keyspace> context;
-	private static Keyspace keyspace;
 }
