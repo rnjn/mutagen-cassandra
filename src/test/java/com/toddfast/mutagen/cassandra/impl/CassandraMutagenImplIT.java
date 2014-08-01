@@ -1,31 +1,28 @@
 package com.toddfast.mutagen.cassandra.impl;
 
 import com.toddfast.mutagen.cassandra.CassandraMutagen;
+
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.HostDistance;
+import com.datastax.driver.core.PoolingOptions;
+import com.datastax.driver.core.Row;
+import com.datastax.driver.core.Session;
+import com.datastax.driver.core.SocketOptions;
 import com.google.common.collect.ImmutableMap;
-import com.netflix.astyanax.AstyanaxContext;
-import com.netflix.astyanax.Keyspace;
-import com.netflix.astyanax.connectionpool.OperationResult;
-import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
-import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
-import com.netflix.astyanax.ddl.SchemaChangeResult;
-import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
-import com.netflix.astyanax.model.ColumnFamily;
-import com.netflix.astyanax.model.ColumnList;
-import com.netflix.astyanax.model.ConsistencyLevel;
-import com.netflix.astyanax.serializers.StringSerializer;
-import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 import com.toddfast.mutagen.Plan;
 import com.toddfast.mutagen.State;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+
 import static org.junit.Assert.*;
 
 /**
@@ -34,24 +31,25 @@ import static org.junit.Assert.*;
  */
 public class CassandraMutagenImplIT {
 	
-	private static AstyanaxContext<Keyspace> context;
+	private static Session session;
 	
-	private static Keyspace keyspace;
-
+	private static final String KEY_SPACE = "TEST_KEYSPACE";
+	
 	public CassandraMutagenImplIT() {
 	}
 
 	@Before
-	public void setUp() throws ConnectionException {
-		defineKeyspace();
+	public void setUp() {
+		defineSession();
 		createKeyspace();
 	}
 
 
 	@After
-	public void tearDown() throws ConnectionException {
-		OperationResult<SchemaChangeResult> result=keyspace.dropKeyspace();
-		System.out.println("Dropped keyspace "+keyspace);
+	public void tearDown() {
+		session.execute("DROP KEYSPACE" + KEY_SPACE + ";");
+		session.close();
+		System.out.println("Dropped keyspace "+KEY_SPACE);
 	}
 
 
@@ -71,7 +69,7 @@ public class CassandraMutagenImplIT {
 		mutagen.initialize(rootResourcePath);
 
 		// Mutate!
-		Plan.Result<Integer> result=mutagen.mutate(keyspace);
+		Plan.Result<Integer> result=mutagen.mutate(session);
 
 		return result;
 	}
@@ -108,79 +106,60 @@ public class CassandraMutagenImplIT {
 		
 		mutate();
 		
-		final ColumnFamily<String,String> CF_TEST1=
-			ColumnFamily.newColumnFamily("Test1",
-				StringSerializer.get(),StringSerializer.get());
+		Row row1 = session.execute("SELECT * FROM Test1 WHERE key = row1;" ).one();
 
-		ColumnList<String> columns;
-		columns=keyspace.prepareQuery(CF_TEST1)
-			.getKey("row1")
-			.execute()
-			.getResult();
+		assertEquals("foo1", row1.getString("value1"));
+		assertEquals("bar1", row1.getString("value2"));
 
-		assertEquals("foo1",columns.getStringValue("value1",null));
-		assertEquals("bar1",columns.getStringValue("value2",null));
+		Row row2 = session.execute("SELECT * FROM Test1 WHERE key = row2;" ).one();
 
-		columns=keyspace.prepareQuery(CF_TEST1)
-			.getKey("row2")
-			.execute()
-			.getResult();
+		assertEquals("chickens",row2.getString("value1"));
+		assertEquals("sneezes",row2.getString("value2"));
 
-		assertEquals("chickens",columns.getStringValue("value1",null));
-		assertEquals("sneezes",columns.getStringValue("value2",null));
-
-		columns=keyspace.prepareQuery(CF_TEST1)
-			.getKey("row3")
-			.execute()
-			.getResult();
-
-		assertEquals("bar",columns.getStringValue("value1",null));
-		assertEquals("baz",columns.getStringValue("value2",null));
+		Row row3 = session.execute("SELECT * FROM Test1 WHERE key = row3;" ).one();
+		
+		assertEquals("bar",row3.getString("value1"));
+		assertEquals("baz",row3.getString("value2"));
 	}
 
-	private static void defineKeyspace() {
-		context=new AstyanaxContext.Builder()
-			.forKeyspace("mutagen_test")
-			.withAstyanaxConfiguration(new AstyanaxConfigurationImpl()
-				.setDefaultReadConsistencyLevel(ConsistencyLevel.CL_QUORUM)
-				.setDefaultWriteConsistencyLevel(ConsistencyLevel.CL_QUORUM)
-			)
-			.withConnectionPoolConfiguration(
-				new ConnectionPoolConfigurationImpl("testPool")
-				.setPort(9160)
-				.setMaxConnsPerHost(1)
-				.setSeeds("localhost")
-			)
-			.withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
-			.buildKeyspace(ThriftFamilyFactory.getInstance());
-
-		context.start();
-		keyspace=context.getClient();
+	private static void defineSession() {
+		int maxConnections = 1;
+		int maxSimultaneousRequests = 2; 
+		
+		PoolingOptions pools = new PoolingOptions();
+		pools.setMaxSimultaneousRequestsPerConnectionThreshold(HostDistance.LOCAL, maxSimultaneousRequests);
+		pools.setCoreConnectionsPerHost(HostDistance.LOCAL, maxConnections);
+		pools.setMaxConnectionsPerHost(HostDistance.LOCAL, maxConnections);
+		pools.setCoreConnectionsPerHost(HostDistance.REMOTE, maxConnections);
+		pools.setMaxConnectionsPerHost(HostDistance.REMOTE, maxConnections);
+		
+		Cluster cluster = new Cluster.Builder()
+			.withPoolingOptions(pools)
+			.addContactPoint("localhost")
+			.withPort(9042)
+			.withSocketOptions(new SocketOptions().setTcpNoDelay(true))
+			.build();
+		
+		session = cluster.connect();
 	}
 	
-	private static void createKeyspace()
-			throws ConnectionException {
+	private static void createKeyspace() {
 
-		System.out.println("Creating keyspace "+keyspace+"...");
+		System.out.println("Creating keyspace " + session + "...");
 
-		int keyspaceReplicationFactor=1;
+		String create_keyspace = 
+				"CREATE keyspace " + KEY_SPACE
+				+ "WITH Replication = {'class': 'SimpleStrategy'" +
+				", 'replication_factor': '1'};";
+		
+		// Create the keyspace using CQL
+		session.execute(create_keyspace);
 
-		Map<String, Object> keyspaceConfig=
-			new HashMap<String, Object>();
-		keyspaceConfig.put("strategy_options",
-			ImmutableMap.<String, Object>builder()
-				.put("replication_factor",
-					""+keyspaceReplicationFactor)
-				.build());
+		// Mark the new keyspace as in use
+		session.execute("use " + KEY_SPACE + ";");
+		
 
-		String keyspaceStrategyClass="SimpleStrategy";
-		keyspaceConfig.put("strategy_class",keyspaceStrategyClass);
-
-		OperationResult<SchemaChangeResult> result=
-			keyspace.createKeyspace(
-				Collections.unmodifiableMap(keyspaceConfig));
-
-		System.out.println("Created keyspace "+keyspace);
+		System.out.println("Created keyspace " + KEY_SPACE);
 	}
 
 }

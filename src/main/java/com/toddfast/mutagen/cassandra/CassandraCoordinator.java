@@ -1,8 +1,6 @@
 package com.toddfast.mutagen.cassandra;
 
-import com.netflix.astyanax.Keyspace;
-import com.netflix.astyanax.model.ColumnFamily;
-import com.netflix.astyanax.serializers.StringSerializer;
+import com.datastax.driver.core.Session;
 import com.toddfast.mutagen.Coordinator;
 import com.toddfast.mutagen.State;
 import com.toddfast.mutagen.Subject;
@@ -14,26 +12,20 @@ import com.toddfast.mutagen.Subject;
  */
 public class CassandraCoordinator implements Coordinator<Integer> {
 	
-	private Keyspace keyspace;
+	private Session session;
 	
-	public static final ColumnFamily<String,String> VERSION_CF=
-			ColumnFamily.newColumnFamily(
-				"schema_version",
-				StringSerializer.get(),
-				StringSerializer.get());
-	
-	public CassandraCoordinator(Keyspace keyspace) {
+	public CassandraCoordinator(Session session) {
 		super();
-		if (keyspace==null) {
+		if (session==null) {
 			throw new IllegalArgumentException(
-				"Parameter \"keyspace\" cannot be null");
+				"Parameter \"session\" cannot be null");
 		}
 
-		this.keyspace=keyspace;
+		this.session=session;
 	}
 	
-	public Keyspace getKeyspace() {
-		return keyspace;
+	public Session getSession() {
+		return session;
 	}
 
 	/**

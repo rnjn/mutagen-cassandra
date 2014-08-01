@@ -7,17 +7,15 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.netflix.astyanax.ColumnListMutation;
-import com.netflix.astyanax.Keyspace;
-import com.netflix.astyanax.MutationBatch;
-import com.netflix.astyanax.connectionpool.OperationResult;
-import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.cql.CqlStatementResult;
-import com.netflix.astyanax.model.ColumnFamily;
-import com.netflix.astyanax.serializers.StringSerializer;
+import org.apache.commons.lang3.StringUtils;
+import org.jboss.netty.util.internal.StringUtil;
+
+import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Session;
+import com.datastax.driver.core.SimpleStatement;
+import com.datastax.driver.core.Statement;
 import com.toddfast.mutagen.MutagenException;
 import com.toddfast.mutagen.State;
-import com.toddfast.mutagen.cassandra.CassandraSubject;
 
 /**
  * This class handles the parsing of CSV files that contain
@@ -35,21 +33,18 @@ import com.toddfast.mutagen.cassandra.CassandraSubject;
  */
 public class CSVMutation extends AbstractCassandraMutation {
 	
-	private String source;
+	private StringBuilder source = new StringBuilder();
 	
 	private State<Integer> state;
 	
-	List<MutationBatch> batchWrites = new ArrayList<MutationBatch>();
-	
-	final ColumnFamily<String,String> CF_TEST1=
-			ColumnFamily.newColumnFamily("Test1",
-				StringSerializer.get(),StringSerializer.get());
+	private List<Statement> updateStatements;
 	
 	private static final String CSV_DELIM = ",";
 
-	public CSVMutation(Keyspace keyspace, String resourceName) {
-		super(keyspace);
+	public CSVMutation(Session session, String resourceName) {
+		super(session);
 		this.state=super.parseVersion(resourceName);
+		this.updateStatements = new ArrayList<Statement>();
 		loadCSVData(resourceName);
 	}
 
@@ -60,20 +55,19 @@ public class CSVMutation extends AbstractCassandraMutation {
 
 	@Override
 	protected String getChangeSummary() {
-		return source;
+		return source.toString();
 	}
 
 	@Override
 	protected void performMutation(com.toddfast.mutagen.Mutation.Context context) {
+		
 		context.debug("Executing mutation {}",state.getID());
-		for(MutationBatch mutation : batchWrites) {
+		
+		for(Statement statement : updateStatements) {
 			try {
-				OperationResult<Void> result = mutation.execute();
-				
-				context.info("Successfully executed CQL \"{}\" in {} attempts",
-						result.getAttemptsCount());
-			} catch (ConnectionException e) {
-				context.error("Exception executing update from CSV\"{}\"",mutation.getRowKeys().toString(), e);
+				ResultSet result = getSession().execute(statement);
+			} catch (Exception e) {
+				context.error("Exception executing update from CSV\"{}\"", e);
 				throw new MutagenException("Exception executing update from csv\"",e);
 			}
 		}
@@ -93,13 +87,14 @@ public class CSVMutation extends AbstractCassandraMutation {
 			
 			while((currentLine = br.readLine()) != null) {
 				String[] rowValues = currentLine.split(CSV_DELIM);
+				
 				addBatchWrite(columnNames, rowValues);
 			}
 			
 		} catch (FileNotFoundException e) {
-			
+			e.printStackTrace();
 		} catch (IOException e) {
-			
+			e.printStackTrace();
 		} finally {
 			if(br != null) {
 				try{
@@ -112,14 +107,21 @@ public class CSVMutation extends AbstractCassandraMutation {
 	}
 	
 	private void addBatchWrite(String[] columnNames, String[] rowValues) {
-		MutationBatch m = getKeyspace().prepareMutationBatch();
+		
+		// TODO: Parse this from the data file
+		String tableName = "test1";
 		
 		// first column is the key
 		for(int i = 1; i < columnNames.length; i++) {
-			m.withRow(CF_TEST1, rowValues[0])
-				.putColumn(columnNames[i], rowValues[i], null);
+			String insert_data = 
+					"INSERT INTO" + tableName +
+					"(" + StringUtils.join(columnNames, ",") + ")" +
+					"VALUES (" + StringUtils.join(rowValues, ",") + ");";
+			Statement statement = new SimpleStatement(insert_data);
+			
+			source.append(StringUtil.NEWLINE).append(insert_data);
+			
+			updateStatements.add(statement);
 		}
-		
-		this.batchWrites.add(m);
 	}
 }

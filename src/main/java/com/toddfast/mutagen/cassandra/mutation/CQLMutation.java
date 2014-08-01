@@ -1,9 +1,7 @@
 package com.toddfast.mutagen.cassandra.mutation;
 
-import com.netflix.astyanax.Keyspace;
-import com.netflix.astyanax.connectionpool.OperationResult;
-import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.cql.CqlStatementResult;
+import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Session;
 import com.toddfast.mutagen.MutagenException;
 import com.toddfast.mutagen.State;
 
@@ -27,8 +25,8 @@ public class CQLMutation extends AbstractCassandraMutation {
 	
 	private List<String> statements=new ArrayList<String>();
 
-	public CQLMutation(Keyspace keyspace, String resourceName) {
-		super(keyspace);
+	public CQLMutation(Session session, String resourceName) {
+		super(session);
 		state=super.parseVersion(resourceName);
 		loadCQLStatements(resourceName);
 	}
@@ -170,25 +168,15 @@ public class CQLMutation extends AbstractCassandraMutation {
 	protected void performMutation(Context context) {
 		context.debug("Executing mutation {}",state.getID());
 		for (String statement: statements) {
-			context.debug("Executing CQL \"{}\"",statement);
-
 			try {
-				OperationResult<CqlStatementResult> result=
-					getKeyspace().prepareCqlStatement()
-						.withCql(statement)
-						.execute();
-
-				context.info("Successfully executed CQL \"{}\" in {} attempts",
-					statement,result.getAttemptsCount());
-			}
-			catch (ConnectionException e) {
-				context.error("Exception executing CQL \"{}\"",statement,e);
-				throw new MutagenException("Exception executing CQL \""+
-					statement+"\"",e);
-			}
-			catch (RuntimeException e) {
-				context.error("Exception executing CQL \"{}\"",statement,e);
-				throw e;
+				context.debug("Executing CQL \"{}\"",statement);
+				ResultSet resultSet = getSession().execute(statement);
+				
+				context.info("Successfully executed CQL \"{}\" with execution info {}",
+						statement, resultSet.getExecutionInfo());
+			} catch (Exception e) {
+				context.error("Exception while executing CQL \"{}\"", statement, e);
+				throw new MutagenException("Exception while executing CQL \"{}\""+ statement, e);
 			}
 		}
 		context.debug("Done executing mutation {}",state.getID());

@@ -1,9 +1,6 @@
 package com.toddfast.mutagen.cassandra.impl;
 
-//import com.conga.nu.AllowField;
-//import com.conga.nu.Scope;
-//import com.conga.nu.ServiceProvider;
-import com.netflix.astyanax.Keyspace;
+import com.datastax.driver.core.Session;
 import com.toddfast.mutagen.Mutation;
 import com.toddfast.mutagen.Plan;
 import com.toddfast.mutagen.Planner;
@@ -22,6 +19,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Pattern;
+
 import org.apache.commons.io.FilenameUtils;
 
 /**
@@ -89,15 +87,15 @@ public class CassandraMutagenImpl implements CassandraMutagen {
 	}
 
 	@Override
-	public Plan.Result<Integer> mutate(Keyspace keyspace) {
+	public Plan.Result<Integer> mutate(Session session) {
 		// Do this in a VM-wide critical section. External cluster-wide 
 		// synchronization is going to have to happen in the coordinator.
 		synchronized (System.class) {
-			CassandraCoordinator coordinator=new CassandraCoordinator(keyspace);
-			CassandraSubject subject=new CassandraSubject(keyspace);
+			CassandraCoordinator coordinator=new CassandraCoordinator(session);
+			CassandraSubject subject=new CassandraSubject(session);
 
 			Planner<Integer> planner=
-				new CassandraPlanner(keyspace,getResources());
+				new CassandraPlanner(session,getResources());
 			Plan<Integer> plan=planner.getPlan(subject,coordinator);
 
 			// Execute the plan

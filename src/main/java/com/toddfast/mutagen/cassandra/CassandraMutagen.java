@@ -1,7 +1,8 @@
 package com.toddfast.mutagen.cassandra;
 
-import com.netflix.astyanax.Keyspace;
+import com.datastax.driver.core.Session;
 import com.toddfast.mutagen.Plan;
+
 import java.io.IOException;
 
 /**
@@ -23,5 +24,5 @@ public interface CassandraMutagen {
 	 *
 	 *
 	 */
-	public Plan.Result<Integer> mutate(Keyspace keyspace);
+	public Plan.Result<Integer> mutate(Session session);
 }

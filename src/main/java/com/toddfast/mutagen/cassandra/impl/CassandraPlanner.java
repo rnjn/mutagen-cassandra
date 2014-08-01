@@ -1,6 +1,6 @@
 package com.toddfast.mutagen.cassandra.impl;
 
-import com.netflix.astyanax.Keyspace;
+import com.datastax.driver.core.Session;
 import com.toddfast.mutagen.Coordinator;
 import com.toddfast.mutagen.MutagenException;
 import com.toddfast.mutagen.Mutation;
@@ -22,14 +22,14 @@ import java.util.List;
  */
 public class CassandraPlanner extends BasicPlanner<Integer> {
 
-	protected CassandraPlanner(Keyspace keyspace, 
+	protected CassandraPlanner(Session session, 
 			List<String> mutationResources) {
-		super(loadMutations(keyspace,mutationResources),null);
+		super(loadMutations(session,mutationResources),null);
 	}
 
 
 	private static List<Mutation<Integer>> loadMutations(
-			Keyspace keyspace, Collection<String> resources) {
+			Session session, Collection<String> resources) {
 
 		List<Mutation<Integer>> result=new ArrayList<Mutation<Integer>>();
 
@@ -38,11 +38,11 @@ public class CassandraPlanner extends BasicPlanner<Integer> {
 			// Allow .sql files because some editors have syntax highlighting
 			// for SQL but not CQL
 			if (resource.endsWith(".cql") || resource.endsWith(".sql")) {
-				result.add(new CQLMutation(keyspace,resource));
+				result.add(new CQLMutation(session,resource));
 			} else if (resource.endsWith(".csv")) {
-				result.add(new CSVMutation(keyspace, resource));
+				result.add(new CSVMutation(session, resource));
 			} else if (resource.endsWith(".class")) {
-				result.add(loadMutationClass(keyspace,resource));
+				result.add(loadMutationClass(session,resource));
 			}
 			else {
 				throw new IllegalArgumentException("Unknown type for "+
@@ -54,7 +54,7 @@ public class CassandraPlanner extends BasicPlanner<Integer> {
 	}
 
 	private static Mutation<Integer> loadMutationClass(
-			Keyspace keyspace, String resource) {
+			Session session, String resource) {
 
 		assert resource.endsWith(".class"):
 			"Class resource name \""+resource+"\" should end with .class";
@@ -79,8 +79,8 @@ public class CassandraPlanner extends BasicPlanner<Integer> {
 			Mutation<Integer> mutation=null;
 			try {
 				// Try a constructor taking a keyspace
-				constructor=clazz.getConstructor(Keyspace.class);
-				mutation=(Mutation<Integer>)constructor.newInstance(keyspace);
+				constructor=clazz.getConstructor(Session.class);
+				mutation=(Mutation<Integer>)constructor.newInstance(session);
 			}
 			catch (NoSuchMethodException e) {
 				// Wrong assumption
