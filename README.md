@@ -16,16 +16,19 @@ Create a Java-style package in your project to contain versioned schema mutation
 
 ### 2. Create mutations
 
-Mutations can be either declarative CQL2/3 or Java classes that use whatever Cassandra client you like (Astyanax is supported directly).
+Mutations can be either declarative CQL2/3, Java classes (using CQL), or simple CSV Data files (for bulk data).
 
-The root package name should be the same for both, and the mutation file names should start with a **version tag**--a prefix that orders the files naturally with a zero-padded integer, like `V001`.  (Anything following the version tag is just a comment for your own use; the verion tag ends with the first non-numeric character.)
+The root package name should be the same for both, and the mutation file names should start with a **version tag**--a prefix that orders the files naturally with a zero-padded integer, like `V001`. CSV files must delimit what table it is meant for in the file name by **version tag**_{TableName}
 
-Examples:
+.CQL and .Java Examples:
 
 * `V001_Some_cql_update.cql`
 * `V002_Some_java_update.java`
 * `V003.cql`
 * `003.cql` (Note that this convention doesn't work for Java classes, so I recommend using a prefix that is compatible with Java identifier rules.)
+ 
+.CSV Examples:
+* `V004_TableName.csv`
 
 Lastly, note that if you use Maven, you'll need to put `.cql` files and `.java` files under separate source roots, but Mutagen will find them and order them properly as long as the version tags are consistent. 
 
@@ -67,9 +70,7 @@ At runtime (normally during app startup), get or create an instance of `Cassandr
 
 Call `CassandraMutagen.initialize()` and provide the package name containing your mutations. You should see log messages listing all the resources that were found.
 
-Obtain an Astyanax `Keyspace` instance. Mutagen Cassandra use the Netflix Astyanax Cassandra client, and requires a configured `Keyspace` instance to work. This should obviously be straightforward if you already use Astyanax. If not, please see the [Keyspace documentation on the Astyanax wiki](https://github.com/Netflix/astyanax/wiki/Create-keyspace-or-column-family).
-
-To perform the mutations, call `CassandraMutagen.mutate(Keyspace);` to update the Cassandra schema to the latest version. Please note, **this method may not throw an exception if there is a problem.** Instead, use the returned value of type `Plan.Result<Integer>` to check for any exceptions thrown during the process. This may change in the future, so it would be prudent to surround your call to `mutate()` with a `try...catch` for `MutagenException`.
+To perform the mutations, call `CassandraMutagen.mutate(Session);` to update the Cassandra schema to the latest version. Please note, **this method may not throw an exception if there is a problem.** Instead, use the returned value of type `Plan.Result<Integer>` to check for any exceptions thrown during the process. This may change in the future, so it would be prudent to surround your call to `mutate()` with a `try...catch` for `MutagenException`.
 
 ### 4. Continue adding mutations
 
@@ -106,6 +107,27 @@ It might instead make sense to create mutations reflecting the manual changes, b
 The easiest way to mutate your Cassandra schema is by using declarative CQL statements. Just be aware that Mutagen Cassandra treats all CQL statements in a single mutation file (separated by semicolons) as a single mutation.
 
 The CQL version that you use is governed by the configuration of the Astyanax `Keyspace` passed to `CassandraMutagen`. Make sure that you set the CQL version to match the statements you'll be using.
+
+### CSV mutations
+
+The easiest way to insert lots of data into a Cassandra Table is to use a CSV file. The data is added with UPDATE statements, so partial data loading is possible. CSV mutations has a specific filename format and data formatting expected.
+
+#### CSV Filename Formatting
+
+CSV files have special formatting that first includes the mutation version, followed by the Table the data is for, seperated by an underscore:
+
+Filename Format: 	V{number}_{ColumnFamily}
+Filename Example:	V0043_AblumsByArtist
+
+#### CSV File Formatting
+
+CSV files require a header and the data to be formatted as follows:
+
+	Header: 	{rowKey}, {columnName},...,{columnName}
+	Data:		'stringKey', 'value',..., numericalValue
+Example:	
+artistName, albumName, yearReleased, numberOfTracks
+'Pink Floyd',  'The Wall', 1979, 26
 
 ### Undoing mutations
 
