@@ -47,7 +47,7 @@ public class CassandraMutagenImplIT {
 
 	@After
 	public void tearDown() {
-		session.execute("DROP KEYSPACE" + KEY_SPACE + ";");
+		session.execute("DROP KEYSPACE " + KEY_SPACE + ";");
 		session.close();
 		System.out.println("Dropped keyspace "+KEY_SPACE);
 	}
@@ -106,17 +106,17 @@ public class CassandraMutagenImplIT {
 		
 		mutate();
 		
-		Row row1 = session.execute("SELECT * FROM Test1 WHERE key = row1;" ).one();
+		Row row1 = session.execute("SELECT * FROM Test1 WHERE key = 'row1';" ).one();
 
 		assertEquals("foo1", row1.getString("value1"));
 		assertEquals("bar1", row1.getString("value2"));
 
-		Row row2 = session.execute("SELECT * FROM Test1 WHERE key = row2;" ).one();
+		Row row2 = session.execute("SELECT * FROM Test1 WHERE key = 'row2';" ).one();
 
 		assertEquals("chickens",row2.getString("value1"));
 		assertEquals("sneezes",row2.getString("value2"));
 
-		Row row3 = session.execute("SELECT * FROM Test1 WHERE key = row3;" ).one();
+		Row row3 = session.execute("SELECT * FROM Test1 WHERE key = 'row3';" ).one();
 		
 		assertEquals("bar",row3.getString("value1"));
 		assertEquals("baz",row3.getString("value2"));
@@ -149,7 +149,7 @@ public class CassandraMutagenImplIT {
 
 		String create_keyspace = 
 				"CREATE keyspace " + KEY_SPACE
-				+ "WITH Replication = {'class': 'SimpleStrategy'" +
+				+ " WITH Replication = {'class': 'SimpleStrategy'" +
 				", 'replication_factor': '1'};";
 		
 		// Create the keyspace using CQL
