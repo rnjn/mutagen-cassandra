@@ -7,10 +7,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.jboss.netty.util.internal.StringUtil;
 
-import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.SimpleStatement;
 import com.datastax.driver.core.Statement;
@@ -21,13 +20,13 @@ import com.toddfast.mutagen.State;
  * This class handles the parsing of CSV files that contain
  * seed data for Column Family (table) in a specific Keyspace.
  * 
- * Filename Format: 	V{number}_{KeyspaceName}_{ColumnFamily}
- * Filename Example:	V0043_MusicApp_AblumsByArtist
+ * Filename Format: 	V{number}_{ColumnFamily}
+ * Filename Example:	V0043_AblumsByArtist
  * 
  * CSV Format:
  * 	Header: 	{rowKey}, {columnName},...,{columnName}
  * 	Example:	artistName, albumName, yearReleased, numberOfTracks
- * 				"Pink Floyd",  "The Wall", "1979", "26"
+ * 				'Pink Floyd',  'The Wall', '1979', '26'
  * 
  * @author Andrew From
  */
@@ -39,7 +38,11 @@ public class CSVMutation extends AbstractCassandraMutation {
 	
 	private List<Statement> updateStatements;
 	
+	private String updateTableName;
+	
 	private static final String CSV_DELIM = ",";
+	
+	private static final String RESOUCE_NAME_DELIM = "_";
 
 	public CSVMutation(Session session, String resourceName) {
 		super(session);
@@ -65,7 +68,7 @@ public class CSVMutation extends AbstractCassandraMutation {
 		
 		for(Statement statement : updateStatements) {
 			try {
-				ResultSet result = getSession().execute(statement);
+				getSession().execute(statement);
 			} catch (Exception e) {
 				context.error("Exception executing update from CSV\"{}\"", e);
 				throw new MutagenException("Exception executing update from csv\"",e);
@@ -77,6 +80,13 @@ public class CSVMutation extends AbstractCassandraMutation {
 		BufferedReader br = null;
 		String currentLine = null;
 		String[] columnNames = null;
+		
+		String[] resourceDetails = FilenameUtils.removeExtension(resourceName).split(RESOUCE_NAME_DELIM);
+		if(resourceDetails.length >= 2) {
+			updateTableName = resourceDetails[1];
+		} else {
+			throw new MutagenException("CSV Mutation: " + resourceName + " is malformed and missing tableName");
+		}
 		
 		try {
 			br = new BufferedReader(new FileReader(resourceName));
@@ -107,12 +117,8 @@ public class CSVMutation extends AbstractCassandraMutation {
 	}
 	
 	private void addBatchWrite(String[] columnNames, String[] rowValues) {
-		
-		// TODO: Parse this from the data file
-		String tableName = "Test1";
-		
 		StringBuilder updateDataCQL = new StringBuilder();
-		updateDataCQL.append("UPDATE ").append(tableName).append(" SET ");
+		updateDataCQL.append("UPDATE ").append(updateTableName).append(" SET ");
 		// first column is the key
 		for(int i = 1; i < columnNames.length; i++) {
 			updateDataCQL.append(columnNames[i]).append("=").append(rowValues[i]);
