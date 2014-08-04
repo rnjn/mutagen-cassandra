@@ -3,9 +3,7 @@ package com.toddfast.mutagen.cassandra.impl;
 import com.toddfast.mutagen.cassandra.CassandraMutagen;
 
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.datastax.driver.core.Cluster;
@@ -14,14 +12,10 @@ import com.datastax.driver.core.PoolingOptions;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.SocketOptions;
-import com.google.common.collect.ImmutableMap;
 import com.toddfast.mutagen.Plan;
 import com.toddfast.mutagen.State;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 
 import static org.junit.Assert.*;
 
@@ -93,7 +87,7 @@ public class CassandraMutagenImplIT {
 
 		assertTrue(result.isMutationComplete());
 		assertNull(result.getException());
-		assertEquals((state!=null ? state.getID() : (Integer)(-1)),(Integer)5);
+		assertEquals((state!=null ? state.getID() : (Integer)(-1)),(Integer)7);
 	}
 
 
@@ -110,11 +104,13 @@ public class CassandraMutagenImplIT {
 
 		assertEquals("foo1", row1.getString("value1"));
 		assertEquals("bar1", row1.getString("value2"));
+		assertEquals("new1", row1.getString("value3"));
 
 		Row row2 = session.execute("SELECT * FROM Test1 WHERE key = 'row2';" ).one();
 
 		assertEquals("chickens",row2.getString("value1"));
 		assertEquals("sneezes",row2.getString("value2"));
+		assertEquals("new2", row2.getString("value3"));
 
 		Row row3 = session.execute("SELECT * FROM Test1 WHERE key = 'row3';" ).one();
 		
