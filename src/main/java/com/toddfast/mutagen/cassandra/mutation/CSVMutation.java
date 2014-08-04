@@ -109,19 +109,23 @@ public class CSVMutation extends AbstractCassandraMutation {
 	private void addBatchWrite(String[] columnNames, String[] rowValues) {
 		
 		// TODO: Parse this from the data file
-		String tableName = "test1";
+		String tableName = "Test1";
 		
+		StringBuilder updateDataCQL = new StringBuilder();
+		updateDataCQL.append("UPDATE ").append(tableName).append(" SET ");
 		// first column is the key
 		for(int i = 1; i < columnNames.length; i++) {
-			String insert_data = 
-					"INSERT INTO" + tableName +
-					"(" + StringUtils.join(columnNames, ",") + ")" +
-					"VALUES (" + StringUtils.join(rowValues, ",") + ");";
-			Statement statement = new SimpleStatement(insert_data);
-			
-			source.append(StringUtil.NEWLINE).append(insert_data);
-			
-			updateStatements.add(statement);
+			updateDataCQL.append(columnNames[i].toCharArray()).append("=").append(rowValues[i]);
+			if(i != (columnNames.length - 1)) {
+				updateDataCQL.append(",");
+			}
 		}
+		updateDataCQL.append(" WHERE ").append(columnNames[0].toCharArray()).append("=").append(rowValues[0]).append(";");
+			
+		Statement statement = new SimpleStatement(updateDataCQL.toString());
+			
+		source.append(StringUtil.NEWLINE).append(updateDataCQL.toString());
+			
+		updateStatements.add(statement);
 	}
 }
