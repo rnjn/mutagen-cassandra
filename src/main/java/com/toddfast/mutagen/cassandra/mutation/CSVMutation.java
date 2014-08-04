@@ -115,12 +115,12 @@ public class CSVMutation extends AbstractCassandraMutation {
 		updateDataCQL.append("UPDATE ").append(tableName).append(" SET ");
 		// first column is the key
 		for(int i = 1; i < columnNames.length; i++) {
-			updateDataCQL.append(columnNames[i].toCharArray()).append("=").append(rowValues[i]);
+			updateDataCQL.append(columnNames[i]).append("=").append(rowValues[i]);
 			if(i != (columnNames.length - 1)) {
 				updateDataCQL.append(",");
 			}
 		}
-		updateDataCQL.append(" WHERE ").append(columnNames[0].toCharArray()).append("=").append(rowValues[0]).append(";");
+		updateDataCQL.append(" WHERE ").append(columnNames[0]).append("=").append(rowValues[0]).append(";");
 			
 		Statement statement = new SimpleStatement(updateDataCQL.toString());
 			
