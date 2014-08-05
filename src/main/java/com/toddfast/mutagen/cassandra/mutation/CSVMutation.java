@@ -8,11 +8,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.jboss.netty.util.internal.StringUtil;
 
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.SimpleStatement;
 import com.datastax.driver.core.Statement;
+import com.datastax.driver.core.querybuilder.Clause;
+import com.datastax.driver.core.querybuilder.QueryBuilder;
+import com.datastax.driver.core.querybuilder.Update;
 import com.toddfast.mutagen.MutagenException;
 import com.toddfast.mutagen.State;
 
@@ -117,21 +121,24 @@ public class CSVMutation extends AbstractCassandraMutation {
 	}
 	
 	private void addBatchWrite(String[] columnNames, String[] rowValues) {
-		StringBuilder updateDataCQL = new StringBuilder();
-		updateDataCQL.append("UPDATE ").append(updateTableName).append(" SET ");
-		// first column is the key
-		for(int i = 1; i < columnNames.length; i++) {
-			updateDataCQL.append(columnNames[i]).append("=").append(rowValues[i]);
-			if(i != (columnNames.length - 1)) {
-				updateDataCQL.append(",");
-			}
+		
+		if((columnNames.length < 2) || (rowValues.length < 2)) {
+			throw new MutagenException("CSV Update for Table: " + updateTableName + " is malformed: "
+					+ " there must be at least 2 header names and 2 row values.");
 		}
-		updateDataCQL.append(" WHERE ").append(columnNames[0]).append("=").append(rowValues[0]).append(";");
+		
+		Update.Where where = QueryBuilder.update(updateTableName).where();
+		// where rowKeyName = rowKeyValue
+		where = where.and(QueryBuilder.eq(columnNames[0], rowValues[0]));
+		
+		Update.Assignments assingments = where.with(QueryBuilder.set(columnNames[1], rowValues[1]));
+				
+		for(int i = 2; i < columnNames.length; i++) {
+			assingments.and(QueryBuilder.set(columnNames[i], rowValues[i]));
+		}			
 			
-		Statement statement = new SimpleStatement(updateDataCQL.toString());
+		source.append(StringUtil.NEWLINE).append(assingments.toString());
 			
-		source.append(StringUtil.NEWLINE).append(updateDataCQL.toString());
-			
-		updateStatements.add(statement);
+		updateStatements.add(assingments);
 	}
 }
