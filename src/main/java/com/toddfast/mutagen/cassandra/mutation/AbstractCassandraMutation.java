@@ -1,19 +1,16 @@
 package com.toddfast.mutagen.cassandra.mutation;
 
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.Session;
+import com.datastax.driver.core.querybuilder.QueryBuilder;
+import com.datastax.driver.core.querybuilder.Update;
 import com.toddfast.mutagen.MutagenException;
 import com.toddfast.mutagen.Mutation;
 import com.toddfast.mutagen.State;
 import com.toddfast.mutagen.basic.SimpleState;
 import com.toddfast.mutagen.cassandra.CassandraSubject;
 
-import java.io.UnsupportedEncodingException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-
-import org.apache.commons.codec.binary.Hex;
+import static com.toddfast.mutagen.cassandra.VersionTable.VERSION_TABLE;
+import static com.toddfast.mutagen.cassandra.VersionTable.VERSION_TABLE_KEY;
+import static com.toddfast.mutagen.cassandra.VersionTable.VERSION_TABLE_VALUE;
 
 /**
  *
@@ -21,15 +18,15 @@ import org.apache.commons.codec.binary.Hex;
  */
 public abstract class AbstractCassandraMutation implements Mutation<Integer> {
 
-	private Session session;
+	private CassandraSubject subject;
 
-	protected AbstractCassandraMutation(Session session) {
+	protected AbstractCassandraMutation(CassandraSubject subject) {
 		super();
-		this.session = session;
+		this.subject = subject;
 	}
 
-	protected Session getSession() {
-		return session;
+	protected CassandraSubject getSubject() {
+		return subject;
 	}
 
 	@Override
@@ -57,33 +54,7 @@ public abstract class AbstractCassandraMutation implements Mutation<Integer> {
 	 * @return
 	 */
 	protected final State<Integer> parseVersion(String resourceName) {
-		String versionString = resourceName;
-		int index = versionString.lastIndexOf("/");
-		if (index != -1) {
-			versionString = versionString.substring(index + 1);
-		}
-
-		index = versionString.lastIndexOf(".");
-		if (index != -1) {
-			versionString = versionString.substring(0, index);
-		}
-
-		StringBuilder buffer = new StringBuilder();
-		for (Character c : versionString.toCharArray()) {
-			// Skip all initial non-digit characters
-			if (!Character.isDigit(c)) {
-				if (buffer.length() == 0) {
-					continue;
-				} else {
-					// End when we reach the first non-digit
-					break;
-				}
-			} else {
-				buffer.append(c);
-			}
-		}
-
-		return new SimpleState<Integer>(Integer.parseInt(buffer.toString()));
+		return new SimpleState<Integer>(MutationParser.parseMutationVersion(resourceName));
 	}
 
 	/**
@@ -103,76 +74,20 @@ public abstract class AbstractCassandraMutation implements Mutation<Integer> {
 		performMutation(context);
 
 		int version = getResultingState().getID();
-
-		String change = getChangeSummary();
-		if (change == null) {
-			change = "";
-		}
-
-		String changeHash = md5String(change);
-
-		String query = "INSERT INTO schema_version (version, change, hash) VALUES (?,?,?)";
-		PreparedStatement prepare = getSession().prepare(query);
-		BoundStatement boundStatement = prepare.bind(version, change,
-				changeHash);
-
+		
+		String tableName = getSubject().getSubjectName();
+		
+		Update.Where updateVersion = QueryBuilder.update(VERSION_TABLE)
+				.with(QueryBuilder.set(VERSION_TABLE_VALUE, version))
+				.where(QueryBuilder.eq(VERSION_TABLE_KEY, tableName));
+		
 		try {
-			getSession().execute(boundStatement);
+			getSubject().getSession().execute(updateVersion);
 		} catch (Exception e) {
-			throw new MutagenException("Could not update \"schema_version\" "
-					+ "column family to state " + version
-					+ "; schema is now out of sync with recorded version", e);
-		}
-
-		query = "UPDATE schema_current_version set version = ? where state = ?";
-		prepare = getSession().prepare(query);
-		boundStatement = prepare.bind(version, CassandraSubject.ROW_KEY);
-
-		try {
-			getSession().execute(boundStatement);
-		} catch (Exception e) {
-			throw new MutagenException("Could not update \"schema_version\" "
-					+ "column family to state " + version
+			throw new MutagenException("Could not update \"table_version\" "
+					+ "column family to state " + version + "for table: " + tableName
 					+ "; schema is now out of sync with recorded version", e);
 		}
 	}
 
-	/**
-	 * Returns a md5 string in Hex format
-	 *
-	 * @param key
-	 * @return
-	 */
-	public static String md5String(String key) {
-
-		byte[] theDigest = md5(key);
-
-		return Hex.encodeHexString(theDigest);
-	}
-
-	/**
-	 * Generates an md5 hash
-	 *
-	 * @param key
-	 * @return
-	 */
-	public static byte[] md5(String key) {
-		MessageDigest algorithm;
-		try {
-			algorithm = MessageDigest.getInstance("MD5");
-		} catch (NoSuchAlgorithmException ex) {
-			throw new RuntimeException(ex);
-		}
-
-		algorithm.reset();
-
-		try {
-			algorithm.update(key.getBytes("UTF-8"));
-		} catch (UnsupportedEncodingException ex) {
-			throw new RuntimeException(ex);
-		}
-
-		byte[] theDigest = algorithm.digest();
-		return theDigest;
-	}
 }

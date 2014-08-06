@@ -1,23 +1,22 @@
 package com.toddfast.mutagen.cassandra.impl;
 
-import com.datastax.driver.core.Session;
-import com.toddfast.mutagen.Mutation;
 import com.toddfast.mutagen.Plan;
 import com.toddfast.mutagen.Planner;
 import com.toddfast.mutagen.basic.ResourceScanner;
 import com.toddfast.mutagen.cassandra.CassandraCoordinator;
 import com.toddfast.mutagen.cassandra.CassandraMutagen;
 import com.toddfast.mutagen.cassandra.CassandraSubject;
+import com.toddfast.mutagen.cassandra.mutation.MutationParser;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.FilenameUtils;
@@ -30,16 +29,7 @@ import org.apache.commons.io.FilenameUtils;
 //@ServiceProvider(scope=Scope.CLIENT_MANAGED)
 public class CassandraMutagenImpl implements CassandraMutagen {
 	
-	private List<String> resources = new ArrayList<String>();
-	
-	
-	/**
-	 * List contains resources in sorted order of version
-	 *
-	 */
-	public List<String> getResources() {
-		return resources;
-	}
+	private Map<String, List<String>> subjectMutations = new HashMap<String, List<String>>();
 	
 	/**
 	 * Find all cassandra version files given a root
@@ -77,7 +67,7 @@ public class CassandraMutagenImpl implements CassandraMutagen {
 						continue;
 					}
                 }
-				resources.add(resource);
+				putSubjectMutation(resource);
 			}
 		}
 		catch (URISyntaxException e) {
@@ -87,20 +77,36 @@ public class CassandraMutagenImpl implements CassandraMutagen {
 	}
 
 	@Override
-	public Plan.Result<Integer> mutate(Session session) {
+	public Plan.Result<Integer> mutate(CassandraSubject subject) {
 		// Do this in a VM-wide critical section. External cluster-wide 
 		// synchronization is going to have to happen in the coordinator.
 		synchronized (System.class) {
-			CassandraCoordinator coordinator=new CassandraCoordinator(session);
-			CassandraSubject subject=new CassandraSubject(session);
+			CassandraCoordinator coordinator=new CassandraCoordinator(subject);
 
 			Planner<Integer> planner=
-				new CassandraPlanner(session,getResources());
+				new CassandraPlanner(subject,subjectMutations.get(subject.getSubjectName()));
 			Plan<Integer> plan=planner.getPlan(subject,coordinator);
 
 			// Execute the plan
 			Plan.Result<Integer> result=plan.execute();
 			return result;
+		}
+	}
+	
+	/**
+	 * Adds mutations for a specific C* Table
+	 * 
+	 * @param resourcePath - the path to the mutation resource
+	 */
+	private void putSubjectMutation(String resourcePath) {
+		String subjectName = MutationParser.parseMutationSubject(resourcePath);
+		
+		if(!subjectMutations.containsKey(subjectName)) {
+			List<String> resources = new ArrayList<String>();
+			resources.add(resourcePath);
+			subjectMutations.put(subjectName, resources);
+		} else {
+			subjectMutations.get(subjectName).add(resourcePath);
 		}
 	}
 

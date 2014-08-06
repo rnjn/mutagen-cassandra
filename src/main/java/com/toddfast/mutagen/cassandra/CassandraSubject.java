@@ -1,12 +1,17 @@
 package com.toddfast.mutagen.cassandra;
 
-import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
-import com.datastax.driver.core.exceptions.AlreadyExistsException;
+import com.datastax.driver.core.querybuilder.QueryBuilder;
+import com.datastax.driver.core.querybuilder.Select;
 import com.toddfast.mutagen.State;
 import com.toddfast.mutagen.Subject;
 import com.toddfast.mutagen.basic.SimpleState;
+
+import static com.toddfast.mutagen.cassandra.VersionTable.VERSION_TABLE;
+import static com.toddfast.mutagen.cassandra.VersionTable.VERSION_TABLE_KEY;
+import static com.toddfast.mutagen.cassandra.VersionTable.VERSION_TABLE_VALUE;
+import static com.toddfast.mutagen.cassandra.VersionTable.createTableVersionTable;
 
 /**
  *
@@ -14,60 +19,44 @@ import com.toddfast.mutagen.basic.SimpleState;
  */
 public class CassandraSubject implements Subject<Integer> {
 	
+	private String subjectName;
+	
 	private Session session;
-	
-	public static final String ROW_KEY="state";
-		
-	public static final String VERSION_COLUMN="version";
-	
-	private static final String VERSION_CF = "create table schema_version ( version int primary key, change text, hash text  );";
-	
-	private static final String CURRENT_VERSION_CF = "create table schema_current_version ( state text primary key, version int ); ";
 
-
-	public CassandraSubject(Session session) {
+	public CassandraSubject(Session session, String table) {
 		super();
-		if (session==null) {
+		if (table==null) {
 			throw new IllegalArgumentException(
-				"Parameter \"session\" cannot be null");
+				"Parameter \"Table\" cannot be null");
 		}
-
-		this.session=session;
+		this.session = session;
+		this.subjectName = table;
 	}
 
+	public String getSubjectName() {
+		return subjectName;
+	}
+	
 	public Session getSession() {
 		return session;
 	}
 
-	private void createSchemaVersionTable() {
-		try {
-			session.execute(VERSION_CF);
-		} catch (AlreadyExistsException e) {
-			
-		}
-		try {
-			session.execute(CURRENT_VERSION_CF);
-		} catch (AlreadyExistsException e) {
-			
-		}
-	}
-
 	@Override
 	public State<Integer> getCurrentState() {
-		int current_version = 0;
+		int currentVersion = 0;		
 		
-		createSchemaVersionTable();
-
-		String cql_version = "SELECT * FROM schema_current_version WHERE state = ?";
-
-		BoundStatement statement = session.prepare(cql_version).bind(ROW_KEY);
-		Row versionRow = session.execute(statement).one();
+		createTableVersionTable(getSession());
 		
-		if(versionRow != null) {
-			current_version = versionRow.getInt(VERSION_COLUMN);
+		Select.Where select = QueryBuilder.select()
+				.all()
+				.from(VERSION_TABLE)
+				.where(QueryBuilder.eq(VERSION_TABLE_KEY, getSubjectName()));
+		
+		Row tableState = session.execute(select).one();
+
+		if(tableState != null) {
+			currentVersion = tableState.getInt(VERSION_TABLE_VALUE);
 		}
-
-
-		return new SimpleState<Integer>(current_version);
+		return new SimpleState<Integer>(currentVersion);
 	}
 }

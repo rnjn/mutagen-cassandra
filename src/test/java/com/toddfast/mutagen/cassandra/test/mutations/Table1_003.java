@@ -1,22 +1,22 @@
 package com.toddfast.mutagen.cassandra.test.mutations;
 
-import com.datastax.driver.core.Session;
 import com.toddfast.mutagen.MutagenException;
 import com.toddfast.mutagen.State;
 import com.toddfast.mutagen.basic.SimpleState;
+import com.toddfast.mutagen.cassandra.CassandraSubject;
 import com.toddfast.mutagen.cassandra.mutation.AbstractCassandraMutation;
 
 /**
  *
  * @author Todd Fast
  */
-public class V003 extends AbstractCassandraMutation {
+public class Table1_003 extends AbstractCassandraMutation {
 	
 
 	private State<Integer> state;
 
-	public V003(Session session) {
-		super(session);
+	public Table1_003(CassandraSubject subject) {
+		super(subject);
 		state=new SimpleState<Integer>(3);
 	}
 
@@ -34,7 +34,7 @@ public class V003 extends AbstractCassandraMutation {
 	 */
 	@Override
 	protected String getChangeSummary() {
-		return "update Test1 set value1='chicken', value2='sneeze' "+
+		return "update Table1 set value1='chicken', value2='sneeze' "+
 			"where key='row2';";
 	}
 
@@ -43,9 +43,9 @@ public class V003 extends AbstractCassandraMutation {
 		context.debug("Executing mutation {}",state.getID());
 		
 		try {
-			getSession().execute(getChangeSummary());
+			getSubject().getSession().execute(getChangeSummary());
 		} catch (Exception e) {
-			throw new MutagenException("Could not update table Test1", e);
+			throw new MutagenException("Could not update table Table1", e);
 		}
 	} 
 }

@@ -1,6 +1,5 @@
 package com.toddfast.mutagen.cassandra;
 
-import com.datastax.driver.core.Session;
 import com.toddfast.mutagen.Coordinator;
 import com.toddfast.mutagen.State;
 import com.toddfast.mutagen.Subject;
@@ -12,20 +11,20 @@ import com.toddfast.mutagen.Subject;
  */
 public class CassandraCoordinator implements Coordinator<Integer> {
 	
-	private Session session;
+	private CassandraSubject subject;
 	
-	public CassandraCoordinator(Session session) {
+	public CassandraCoordinator(CassandraSubject subject) {
 		super();
-		if (session==null) {
+		if (subject==null) {
 			throw new IllegalArgumentException(
-				"Parameter \"session\" cannot be null");
+				"Parameter \"Subject\" cannot be null");
 		}
 
-		this.session=session;
+		this.subject=subject;
 	}
 	
-	public Session getSession() {
-		return session;
+	public CassandraSubject getSession() {
+		return subject;
 	}
 
 	/**

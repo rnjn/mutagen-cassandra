@@ -8,17 +8,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.jboss.netty.util.internal.StringUtil;
 
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.SimpleStatement;
 import com.datastax.driver.core.Statement;
-import com.datastax.driver.core.querybuilder.Clause;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Update;
 import com.toddfast.mutagen.MutagenException;
 import com.toddfast.mutagen.State;
+import com.toddfast.mutagen.cassandra.CassandraSubject;
 
 /**
  * This class handles the parsing of CSV files that contain
@@ -48,8 +45,8 @@ public class CSVMutation extends AbstractCassandraMutation {
 	
 	private static final String RESOUCE_NAME_DELIM = "_";
 
-	public CSVMutation(Session session, String resourceName) {
-		super(session);
+	public CSVMutation(CassandraSubject subject, String resourceName) {
+		super(subject);
 		this.state=super.parseVersion(resourceName);
 		this.updateStatements = new ArrayList<Statement>();
 		loadCSVData(resourceName);
@@ -72,7 +69,7 @@ public class CSVMutation extends AbstractCassandraMutation {
 		
 		for(Statement statement : updateStatements) {
 			try {
-				getSession().execute(statement);
+				getSubject().getSession().execute(statement);
 			} catch (Exception e) {
 				context.error("Exception executing update from CSV\"{}\"", e);
 				throw new MutagenException("Exception executing update from csv\"",e);
@@ -85,12 +82,7 @@ public class CSVMutation extends AbstractCassandraMutation {
 		String currentLine = null;
 		String[] columnNames = null;
 		
-		String[] resourceDetails = FilenameUtils.removeExtension(resourceName).split(RESOUCE_NAME_DELIM);
-		if(resourceDetails.length >= 2) {
-			updateTableName = resourceDetails[1];
-		} else {
-			throw new MutagenException("CSV Mutation: " + resourceName + " is malformed and missing tableName");
-		}
+		updateTableName = MutationParser.parseMutationSubject(resourceName);
 		
 		try {
 			br = new BufferedReader(new FileReader(resourceName));

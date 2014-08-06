@@ -1,20 +1,19 @@
 package com.toddfast.mutagen.cassandra.impl;
 
-import com.datastax.driver.core.Session;
 import com.toddfast.mutagen.Coordinator;
-import com.toddfast.mutagen.MutagenException;
 import com.toddfast.mutagen.Mutation;
 import com.toddfast.mutagen.Plan;
 import com.toddfast.mutagen.Subject;
 import com.toddfast.mutagen.basic.BasicPlanner;
+import com.toddfast.mutagen.cassandra.CassandraSubject;
 import com.toddfast.mutagen.cassandra.mutation.CQLMutation;
 import com.toddfast.mutagen.cassandra.mutation.CSVMutation;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+
+import static com.toddfast.mutagen.cassandra.mutation.ClassMutation.loadMutationClass;
 
 /**
  *
@@ -22,14 +21,14 @@ import java.util.List;
  */
 public class CassandraPlanner extends BasicPlanner<Integer> {
 
-	protected CassandraPlanner(Session session, 
+	protected CassandraPlanner(CassandraSubject subject, 
 			List<String> mutationResources) {
-		super(loadMutations(session,mutationResources),null);
+		super(loadMutations(subject,mutationResources),null);
 	}
 
 
 	private static List<Mutation<Integer>> loadMutations(
-			Session session, Collection<String> resources) {
+			CassandraSubject subject, Collection<String> resources) {
 
 		List<Mutation<Integer>> result=new ArrayList<Mutation<Integer>>();
 
@@ -38,11 +37,11 @@ public class CassandraPlanner extends BasicPlanner<Integer> {
 			// Allow .sql files because some editors have syntax highlighting
 			// for SQL but not CQL
 			if (resource.endsWith(".cql") || resource.endsWith(".sql")) {
-				result.add(new CQLMutation(session,resource));
+				result.add(new CQLMutation(subject,resource));
 			} else if (resource.endsWith(".csv")) {
-				result.add(new CSVMutation(session, resource));
+				result.add(new CSVMutation(subject, resource));
 			} else if (resource.endsWith(".class")) {
-				result.add(loadMutationClass(session,resource));
+				result.add(loadMutationClass(subject,resource));
 			}
 			else {
 				throw new IllegalArgumentException("Unknown type for "+
@@ -51,72 +50,6 @@ public class CassandraPlanner extends BasicPlanner<Integer> {
 		}
 
 		return result;
-	}
-
-	private static Mutation<Integer> loadMutationClass(
-			Session session, String resource) {
-
-		assert resource.endsWith(".class"):
-			"Class resource name \""+resource+"\" should end with .class";
-
-		int index=resource.indexOf(".class");
-		String className=resource.substring(0,index).replace('/','.');
-
-		// Load the class specified by the resource
-		Class<?> clazz=null;
-		try {
-			clazz=Class.forName(className);
-		}
-		catch (ClassNotFoundException e) {
-			// Should never happen
-			throw new MutagenException("Could not load mutagen class \""+
-				resource+"\"",e);
-		}
-
-		// Instantiate the class
-		try {
-			Constructor<?> constructor;
-			Mutation<Integer> mutation=null;
-			try {
-				// Try a constructor taking a keyspace
-				constructor=clazz.getConstructor(Session.class);
-				mutation=(Mutation<Integer>)constructor.newInstance(session);
-			}
-			catch (NoSuchMethodException e) {
-				// Wrong assumption
-			}
-
-			if (mutation==null) {
-				// Try the null constructor
-				try {
-					constructor=clazz.getConstructor();
-					mutation=(Mutation<Integer>)constructor.newInstance();
-				}
-				catch (NoSuchMethodException e) {
-					throw new MutagenException("Could not find comparible "+
-						"constructor for class \""+className+"\"",e);
-				}
-			}
-
-			return mutation;
-		}
-		catch (InstantiationException e) {
-			throw new MutagenException("Could not instantiate class \""+
-				className+"\"",e);
-		}
-		catch (InvocationTargetException e) {
-			if (e.getTargetException() instanceof RuntimeException) {
-				throw (RuntimeException)e.getTargetException();
-			}
-			else {
-				throw new MutagenException("Exception instantiating class \""+
-					className+"\"",e);
-			}
-		}
-		catch (IllegalAccessException e) {
-			throw new MutagenException("Could not access constructor for "+
-				"mutation class \""+className+"\"",e);
-		}
 	}
 
 	@Override

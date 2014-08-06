@@ -1,6 +1,7 @@
 package com.toddfast.mutagen.cassandra.impl;
 
 import com.toddfast.mutagen.cassandra.CassandraMutagen;
+import com.toddfast.mutagen.cassandra.CassandraSubject;
 
 import org.junit.After;
 import org.junit.Before;
@@ -63,7 +64,8 @@ public class CassandraMutagenImplIT {
 		mutagen.initialize(rootResourcePath);
 
 		// Mutate!
-		Plan.Result<Integer> result=mutagen.mutate(session);
+		CassandraSubject subject = new CassandraSubject(session, "Table1");
+		Plan.Result<Integer> result=mutagen.mutate(subject);
 
 		return result;
 	}
@@ -100,19 +102,19 @@ public class CassandraMutagenImplIT {
 		
 		mutate();
 		
-		Row row1 = session.execute("SELECT * FROM Test1 WHERE key = 'row1';" ).one();
+		Row row1 = session.execute("SELECT * FROM Table1 WHERE key = 'row1';" ).one();
 
 		assertEquals("foo1", row1.getString("value1"));
 		assertEquals("bar1", row1.getString("value2"));
 		assertEquals("new1", row1.getString("value3"));
 
-		Row row2 = session.execute("SELECT * FROM Test1 WHERE key = 'row2';" ).one();
+		Row row2 = session.execute("SELECT * FROM Table1 WHERE key = 'row2';" ).one();
 
 		assertEquals("chickens",row2.getString("value1"));
 		assertEquals("sneezes",row2.getString("value2"));
 		assertEquals("new2", row2.getString("value3"));
 
-		Row row3 = session.execute("SELECT * FROM Test1 WHERE key = 'row3';" ).one();
+		Row row3 = session.execute("SELECT * FROM Table1 WHERE key = 'row3';" ).one();
 		
 		assertEquals("bar",row3.getString("value1"));
 		assertEquals("baz",row3.getString("value2"));

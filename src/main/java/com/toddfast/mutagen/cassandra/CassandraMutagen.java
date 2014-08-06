@@ -1,6 +1,5 @@
 package com.toddfast.mutagen.cassandra;
 
-import com.datastax.driver.core.Session;
 import com.toddfast.mutagen.Plan;
 
 import java.io.IOException;
@@ -24,5 +23,5 @@ public interface CassandraMutagen {
 	 *
 	 *
 	 */
-	public Plan.Result<Integer> mutate(Session session);
+	public Plan.Result<Integer> mutate(CassandraSubject subject);
 }
