@@ -18,17 +18,17 @@ Create a Java-style package in your project to contain versioned schema mutation
 
 Mutations can be either declarative CQL2/3, Java classes (using CQL), or simple CSV Data files (for bulk data).
 
-The root package name should be the same for both, and the mutation file names should start with a **version tag**--a prefix that orders the files naturally with a zero-padded integer, like `V001`. CSV files must delimit what table it is meant for in the file name by **version tag**_{TableName}
+The root package name should be the same for both, and the mutation file names must delimit what table it is meant for in the file name by {TableName}_**version tag**
 
 .CQL and .Java Examples:
 
-* `V001_Some_cql_update.cql`
-* `V002_Some_java_update.java`
-* `V003.cql`
-* `003.cql` (Note that this convention doesn't work for Java classes, so I recommend using a prefix that is compatible with Java identifier rules.)
+* `SomeTable_001.cql`
+* `SomeOtherTable_002.java`
+* `ATable_003.cql`
+* `aTable_004.cql`
  
 .CSV Examples:
-* `V004_TableName.csv`
+* `TableName_005.csv`
 
 Lastly, note that if you use Maven, you'll need to put `.cql` files and `.java` files under separate source roots, but Mutagen will find them and order them properly as long as the version tags are consistent. 
 
@@ -42,11 +42,11 @@ try {
 	// Initialize the list of mutations
 	mutagen.initialize("my/cassandra/mutations");
 
-	// Get an Astyanax keyspace
-	Keyspace keyspace = ...
+	// Specify specific subject to mutate, and pass C* session
+	CassandraSubject subject = new CassandraSubject("TABLE", session)
 
 	// Mutate! Note, this method may not throw an exception.
-	Plan.Result<Integer> result = mutagen.mutate(keyspace);
+	Plan.Result<Integer> result = mutagen.mutate(subject);
 	
 	// Inspect result, especially for an exception
 	if (result.getException() != null) {
@@ -70,8 +70,6 @@ At runtime (normally during app startup), get or create an instance of `Cassandr
 
 Call `CassandraMutagen.initialize()` and provide the package name containing your mutations. You should see log messages listing all the resources that were found.
 
-To perform the mutations, call `CassandraMutagen.mutate(Session);` to update the Cassandra schema to the latest version. Please note, **this method may not throw an exception if there is a problem.** Instead, use the returned value of type `Plan.Result<Integer>` to check for any exceptions thrown during the process. This may change in the future, so it would be prudent to surround your call to `mutate()` with a `try...catch` for `MutagenException`.
-
 ### 4. Continue adding mutations
 
 As you continue development, continue adding mutation files to the mutations package and running Mutagen Cassandra during startup. There is no need to conditionalize running Mutagen, as its purpose is to check each time for new schema mutations and apply them.
@@ -86,13 +84,13 @@ Note that the unit test mixes declarative CQL mutations with a Java mutation (`V
 Other Details
 -------------
 
-### The `schema_version` column family
+### The `table_version` column family
 
-Mutagen Cassandra adds a column family to your keyspace called `schema_version` which tracks the current version of the schema. It doesn't otherwise change your keyspace in any way (like dropping and recreating it--whoops!), so it's possible to mix and match versioned and non-versioned column families in the same keyspace.
+Mutagen Cassandra adds a Table to your keyspace called `table_version` which tracks the current versions of the tables in your keyspace. It doesn't otherwise change your keyspace in any way (like dropping and recreating it--whoops!), so it's possible to mix and match versioned and non-versioned column families in the same keyspace.
 
 ### Using Mutagen with an existing schema
 
-Mutagen *mutates* schemas; it doesn't assume it owns them. If you already have a schema in Cassandra and want to start mutating it with Mutagen, you needn't do anything but use Mutagen as described above (starting with whatever version number you like). It will automatically create the `schema_version` column family and happily start applying mutations. Mutagen doesn't know or care semantically what the mutations it's applying are; just be sure that mutations targeting existing column familes *alter* them instead of creating them.
+Mutagen *mutates* schemas; it doesn't assume it owns them. If you already have a schema in Cassandra and want to start mutating it with Mutagen, you needn't do anything but use Mutagen as described above (starting with whatever version number you like). It will automatically create the `table_version` Table and happily start applying mutations to versioned tables. Mutagen doesn't know or care semantically what the mutations it's applying are; just be sure that mutations targeting the indicated Table.
 
 ### Manual changes to a schema
 
@@ -106,7 +104,6 @@ It might instead make sense to create mutations reflecting the manual changes, b
 
 The easiest way to mutate your Cassandra schema is by using declarative CQL statements. Just be aware that Mutagen Cassandra treats all CQL statements in a single mutation file (separated by semicolons) as a single mutation.
 
-The CQL version that you use is governed by the configuration of the Astyanax `Keyspace` passed to `CassandraMutagen`. Make sure that you set the CQL version to match the statements you'll be using.
 
 ### CSV mutations
 
@@ -116,8 +113,8 @@ The easiest way to insert lots of data into a Cassandra Table is to use a CSV fi
 
 CSV files have special formatting that first includes the mutation version, followed by the Table the data is for, seperated by an underscore:
 
-Filename Format: 	V{number}_{ColumnFamily}
-Filename Example:	V0043_AblumsByArtist
+Filename Format: 	{ColumnFamily}_{NUBMER}
+Filename Example:	AblumsByArtist_042
 
 #### CSV File Formatting
 
