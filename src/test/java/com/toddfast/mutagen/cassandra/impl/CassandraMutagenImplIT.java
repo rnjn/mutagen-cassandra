@@ -125,6 +125,7 @@ public class CassandraMutagenImplIT {
 		int maxSimultaneousRequests = 2; 
 		
 		PoolingOptions pools = new PoolingOptions();
+		pools.setMinSimultaneousRequestsPerConnectionThreshold(HostDistance.LOCAL, 0);
 		pools.setMaxSimultaneousRequestsPerConnectionThreshold(HostDistance.LOCAL, maxSimultaneousRequests);
 		pools.setCoreConnectionsPerHost(HostDistance.LOCAL, maxConnections);
 		pools.setMaxConnectionsPerHost(HostDistance.LOCAL, maxConnections);
