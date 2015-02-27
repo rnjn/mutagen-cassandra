@@ -28,7 +28,7 @@ public class CassandraMutagenImplIT {
 	
 	private static Session session;
 	
-	private static final String KEY_SPACE = "TEST_KEYSPACE";
+	private static final String KEY_SPACE = "Keyspace1";
 	
 	public CassandraMutagenImplIT() {
 	}
@@ -47,35 +47,17 @@ public class CassandraMutagenImplIT {
 		System.out.println("Dropped keyspace "+KEY_SPACE);
 	}
 
-
-	/**
-	 * This is it!
-	 *
-	 */
-	private Plan.Result<Integer> mutate()
+	private Plan.Result<Integer> mutate(String rootResourcePath)
 			throws IOException {
-
-		// Get an instance of CassandraMutagen
-		// Using Nu: CassandraMutagen mutagen=$(CassandraMutagen.class);
-		CassandraMutagen mutagen=new CassandraMutagenImpl();
-
-		// Initialize the list of mutations
-		String rootResourcePath="com/toddfast/mutagen/cassandra/test/mutations";
+		CassandraMutagen mutagen=new CassandraMutagenImpl("Keyspace1");
 		mutagen.initialize(rootResourcePath);
-
-		// Mutate!
-		CassandraSubject subject = new CassandraSubject(session, "Table1");
-		Plan.Result<Integer> result=mutagen.mutate(subject);
-
-		return result;
+		CassandraSubject subject = new CassandraSubject(session, "Keyspace1");
+		return mutagen.mutate(subject);
 	}
 
 	@Test
-	public void testInitialize() throws Exception {
-
-		Plan.Result<Integer> result = mutate();
-
-		// Check the results
+	public void testInitializeResourcesByKeyspace() throws Exception {
+		Plan.Result<Integer> result = mutate("com/toddfast/mutagen/cassandra/test/mutations/keyspace1");
 		State<Integer> state=result.getLastState();
 
 		System.out.println("Mutation complete: "+result.isMutationComplete());
@@ -84,38 +66,51 @@ public class CassandraMutagenImplIT {
 			result.getException().printStackTrace();
 		}
 		System.out.println("Completed mutations: "+result.getCompletedMutations());
-		System.out.println("Remining mutations: "+result.getRemainingMutations());
+		System.out.println("Remaining mutations: "+result.getRemainingMutations());
 		System.out.println("Last state: "+(state!=null ? state.getID() : "null"));
 
 		assertTrue(result.isMutationComplete());
 		assertNull(result.getException());
-		assertEquals((state!=null ? state.getID() : (Integer)(-1)),(Integer)7);
+		assertEquals((state!=null ? state.getID() : (Integer)(-1)),(Integer)5);
+	}
+
+	@Test
+	public void testInitializeResourcesDefaultedKeyspace() throws Exception {
+		Plan.Result<Integer> result = mutate("mutations");
+		State<Integer> state=result.getLastState();
+
+		System.out.println("Mutation complete: "+result.isMutationComplete());
+		System.out.println("Exception: "+result.getException());
+		if (result.getException()!=null) {
+			result.getException().printStackTrace();
+		}
+		System.out.println("Completed mutations: "+result.getCompletedMutations());
+		System.out.println("Remaining mutations: "+result.getRemainingMutations());
+		System.out.println("Last state: "+(state!=null ? state.getID() : "null"));
+
+		assertTrue(result.isMutationComplete());
+		assertNull(result.getException());
+		assertEquals((state!=null ? state.getID() : (Integer)(-1)),(Integer)4);
 	}
 
 
-	/**
-	 *
-	 *
-	 */
 	@Test
 	public void testData() throws Exception {
-		
-		mutate();
-		
+
+		mutate("com/toddfast/mutagen/cassandra/test/mutations/keyspace1");
+
 		Row row1 = session.execute("SELECT * FROM Table1 WHERE key = 'row1';" ).one();
 
-		assertEquals("foo1", row1.getString("value1"));
-		assertEquals("bar1", row1.getString("value2"));
-		assertEquals("new1", row1.getString("value3"));
+		assertEquals("foo", row1.getString("value1"));
+		assertEquals("bar", row1.getString("value2"));
 
 		Row row2 = session.execute("SELECT * FROM Table1 WHERE key = 'row2';" ).one();
 
-		assertEquals("chickens",row2.getString("value1"));
-		assertEquals("sneezes",row2.getString("value2"));
-		assertEquals("new2", row2.getString("value3"));
+		assertEquals("chicken",row2.getString("value1"));
+		assertEquals("sneeze",row2.getString("value2"));
 
 		Row row3 = session.execute("SELECT * FROM Table1 WHERE key = 'row3';" ).one();
-		
+
 		assertEquals("bar",row3.getString("value1"));
 		assertEquals("baz",row3.getString("value2"));
 	}

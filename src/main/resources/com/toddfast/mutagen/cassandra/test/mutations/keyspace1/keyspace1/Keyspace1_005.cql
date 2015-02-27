@@ -1,0 +1,1 @@
+alter table Table1 add value3 varchar;

@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.io.FilenameUtils;
 import org.jboss.netty.util.internal.StringUtil;
 
 import com.datastax.driver.core.Statement;
@@ -82,7 +81,7 @@ public class CSVMutation extends AbstractCassandraMutation {
 		String currentLine = null;
 		String[] columnNames = null;
 		
-		updateTableName = MutationParser.parseMutationSubject(resourceName);
+		updateTableName = MutationParser.parseMutationSubject(resourceName, getSubject().getKeyspace());
 		
 		try {
 			br = new BufferedReader(new FileReader(resourceName));

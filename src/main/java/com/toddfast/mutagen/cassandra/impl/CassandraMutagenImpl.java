@@ -20,17 +20,23 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  *
  * 
  * @author Todd Fast
  */
-//@ServiceProvider(scope=Scope.CLIENT_MANAGED)
 public class CassandraMutagenImpl implements CassandraMutagen {
-	
+
 	private Map<String, List<String>> subjectMutations = new HashMap<String, List<String>>();
-	
+	private String defaultKeyspace;
+
+	public CassandraMutagenImpl(String defaultKeyspace) {
+
+		this.defaultKeyspace = defaultKeyspace;
+	}
+
 	/**
 	 * Find all cassandra version files given a root
 	 * resource path to search.
@@ -84,7 +90,7 @@ public class CassandraMutagenImpl implements CassandraMutagen {
 			CassandraCoordinator coordinator=new CassandraCoordinator(subject);
 
 			Planner<Integer> planner=
-				new CassandraPlanner(subject,subjectMutations.get(subject.getSubjectName()));
+				new CassandraPlanner(subject,subjectMutations.get(subject.getKeyspace()));
 			Plan<Integer> plan=planner.getPlan(subject,coordinator);
 
 			// Execute the plan
@@ -94,13 +100,15 @@ public class CassandraMutagenImpl implements CassandraMutagen {
 	}
 	
 	/**
-	 * Adds mutations for a specific C* Table
+	 * Adds mutations for a specific C* Keyspace
 	 * 
 	 * @param resourcePath - the path to the mutation resource
 	 */
 	private void putSubjectMutation(String resourcePath) {
-		String subjectName = MutationParser.parseMutationSubject(resourcePath);
-		
+		String subjectName = MutationParser.parseMutationSubject(resourcePath, defaultKeyspace);
+		if(StringUtils.isBlank(subjectName))
+			subjectName = this.defaultKeyspace;
+
 		if(!subjectMutations.containsKey(subjectName)) {
 			List<String> resources = new ArrayList<String>();
 			resources.add(resourcePath);

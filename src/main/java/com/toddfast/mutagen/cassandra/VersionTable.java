@@ -5,9 +5,9 @@ import com.datastax.driver.core.exceptions.AlreadyExistsException;
 
 public class VersionTable {
 	
-	public final static String VERSION_TABLE = "table_version";
+	public final static String VERSION_TABLE = "keyspace_version";
 
-	public final static String VERSION_TABLE_KEY = "table_name";
+	public final static String VERSION_TABLE_KEY = "keyspace_name";
 	
 	public final static String VERSION_TABLE_VALUE = "version";
 	

@@ -1,4 +1,4 @@
-package com.toddfast.mutagen.cassandra.test.mutations;
+package com.toddfast.mutagen.cassandra.test.mutations.keyspace1;
 
 import com.toddfast.mutagen.MutagenException;
 import com.toddfast.mutagen.State;
@@ -10,12 +10,12 @@ import com.toddfast.mutagen.cassandra.mutation.AbstractCassandraMutation;
  *
  * @author Todd Fast
  */
-public class Table1_003 extends AbstractCassandraMutation {
+public class Keyspace1_003 extends AbstractCassandraMutation {
 	
 
 	private State<Integer> state;
 
-	public Table1_003(CassandraSubject subject) {
+	public Keyspace1_003(CassandraSubject subject) {
 		super(subject);
 		state=new SimpleState<Integer>(3);
 	}

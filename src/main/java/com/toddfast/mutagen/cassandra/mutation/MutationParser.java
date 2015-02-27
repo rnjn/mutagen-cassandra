@@ -10,20 +10,22 @@ public class MutationParser {
 	
 	private static final int VERSION_INDEX = 1;
 	
-	public static final Integer parseMutationVersion(String resourcePath) {
-		return Integer.parseInt(parseFilename(resourcePath)[VERSION_INDEX]);
+	public static Integer parseMutationVersion(String resourcePath) {
+		String[] fileNameParts = parseFilename(resourcePath);
+		if(1 == fileNameParts.length) return Integer.parseInt(fileNameParts[0]);
+		return Integer.parseInt(fileNameParts[VERSION_INDEX]);
 	}
 	
-	public static final String parseMutationSubject(String resourcePath) {
-		return parseFilename(resourcePath)[SUBJECT_INDEX];
-	}
-	
-	private static final String[] parseFilename(String resourcePath) {
-		File resource = new File(resourcePath);
-		String[] fileNameParts = resource.getName().split("\\.")[0].split("_");
+	public static String parseMutationSubject(String resourcePath, String defaultKeyspace) {
+
+		String[] fileNameParts = parseFilename(resourcePath);
 		if(fileNameParts.length < 2) {
-			throw new MutagenException("File: " + resourcePath + " naming scheme is malformed.");
+			return defaultKeyspace;
 		}
-		return fileNameParts;
+		return fileNameParts[SUBJECT_INDEX];
+	}
+	
+	private static String[] parseFilename(String resourcePath) {
+		return new File(resourcePath).getName().split("\\.")[0].split("_");
 	}
 }

@@ -7,7 +7,6 @@ import com.toddfast.mutagen.Subject;
 import com.toddfast.mutagen.basic.BasicPlanner;
 import com.toddfast.mutagen.cassandra.CassandraSubject;
 import com.toddfast.mutagen.cassandra.mutation.CQLMutation;
-import com.toddfast.mutagen.cassandra.mutation.CSVMutation;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -38,8 +37,6 @@ public class CassandraPlanner extends BasicPlanner<Integer> {
 			// for SQL but not CQL
 			if (resource.endsWith(".cql") || resource.endsWith(".sql")) {
 				result.add(new CQLMutation(subject,resource));
-			} else if (resource.endsWith(".csv")) {
-				result.add(new CSVMutation(subject, resource));
 			} else if (resource.endsWith(".class")) {
 				result.add(loadMutationClass(subject,resource));
 			}

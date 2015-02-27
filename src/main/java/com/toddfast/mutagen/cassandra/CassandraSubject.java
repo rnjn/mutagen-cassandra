@@ -19,22 +19,22 @@ import static com.toddfast.mutagen.cassandra.VersionTable.createTableVersionTabl
  */
 public class CassandraSubject implements Subject<Integer> {
 	
-	private String subjectName;
-	
+	private String keyspace;
+
 	private Session session;
 
-	public CassandraSubject(Session session, String table) {
+	public CassandraSubject(Session session, String keyspace) {
 		super();
-		if (table==null) {
+		if (keyspace==null) {
 			throw new IllegalArgumentException(
 				"Parameter \"Table\" cannot be null");
 		}
 		this.session = session;
-		this.subjectName = table;
+		this.keyspace = keyspace;
 	}
 
-	public String getSubjectName() {
-		return subjectName;
+	public String getKeyspace() {
+		return keyspace;
 	}
 	
 	public Session getSession() {
@@ -50,7 +50,7 @@ public class CassandraSubject implements Subject<Integer> {
 		Select.Where select = QueryBuilder.select()
 				.all()
 				.from(VERSION_TABLE)
-				.where(QueryBuilder.eq(VERSION_TABLE_KEY, getSubjectName()));
+				.where(QueryBuilder.eq(VERSION_TABLE_KEY, getKeyspace()));
 		
 		Row tableState = session.execute(select).one();
 

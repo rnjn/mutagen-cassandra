@@ -75,7 +75,7 @@ public abstract class AbstractCassandraMutation implements Mutation<Integer> {
 
 		int version = getResultingState().getID();
 		
-		String tableName = getSubject().getSubjectName();
+		String tableName = getSubject().getKeyspace();
 		
 		Update.Where updateVersion = QueryBuilder.update(VERSION_TABLE)
 				.with(QueryBuilder.set(VERSION_TABLE_VALUE, version))
