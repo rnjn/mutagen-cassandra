@@ -2,16 +2,16 @@ package com.toddfast.mutagen.cassandra;
 
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
+import com.datastax.driver.core.querybuilder.Ordering;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select;
 import com.toddfast.mutagen.State;
 import com.toddfast.mutagen.Subject;
 import com.toddfast.mutagen.basic.SimpleState;
 
-import static com.toddfast.mutagen.cassandra.VersionTable.VERSION_TABLE;
-import static com.toddfast.mutagen.cassandra.VersionTable.VERSION_TABLE_KEY;
-import static com.toddfast.mutagen.cassandra.VersionTable.VERSION_TABLE_VALUE;
-import static com.toddfast.mutagen.cassandra.VersionTable.createTableVersionTable;
+import java.nio.ByteBuffer;
+
+import static com.toddfast.mutagen.cassandra.VersionTable.*;
 
 /**
  *
@@ -48,14 +48,16 @@ public class CassandraSubject implements Subject<Integer> {
 		createTableVersionTable(getSession());
 		
 		Select.Where select = QueryBuilder.select()
-				.all()
+				.column(VERSION_TABLE_VALUE)
 				.from(VERSION_TABLE)
-				.where(QueryBuilder.eq(VERSION_TABLE_KEY, getKeyspace()));
-		
-		Row tableState = session.execute(select).one();
+				.where(QueryBuilder.eq(VERSION_TABLE_KEY, "state"))
+				.and(QueryBuilder.eq(VERSION_TABLE_ROW_TYPE, "version"));
 
-		if(tableState != null) {
-			currentVersion = tableState.getInt(VERSION_TABLE_VALUE);
+		Row state = session.execute(select).one();
+
+		if(state != null) {
+			ByteBuffer bytes = state.getBytes(VERSION_TABLE_VALUE);
+			currentVersion = bytes.asIntBuffer().get();
 		}
 		return new SimpleState<Integer>(currentVersion);
 	}
