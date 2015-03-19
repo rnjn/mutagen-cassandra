@@ -9,6 +9,8 @@ import com.toddfast.mutagen.State;
 import com.toddfast.mutagen.basic.SimpleState;
 import com.toddfast.mutagen.cassandra.CassandraSubject;
 
+import java.nio.ByteBuffer;
+
 import static com.toddfast.mutagen.cassandra.VersionTable.*;
 import static com.toddfast.mutagen.cassandra.mutation.HashUtils.md5String;
 
@@ -68,26 +70,28 @@ public abstract class AbstractCassandraMutation implements Mutation<Integer> {
         // Perform the mutation
         performMutation(context);
 
-        String version = String.format("%08d", getResultingState().getID());
+        Integer version = getResultingState().getID();
         String changeSummary = getChangeSummary();
         String changeHash = md5String(changeSummary);
 
         String keySpace = getSubject().getKeyspace();
 
         Insert insertVersionChange = QueryBuilder.insertInto(VERSION_TABLE)
-                .value(VERSION_TABLE_KEY, version)
+                .value(VERSION_TABLE_KEY, version.toString())
                 .value(VERSION_TABLE_ROW_TYPE, "change")
                 .value(VERSION_TABLE_VALUE, changeSummary);
 
         Insert insertVersionHash = QueryBuilder.insertInto(VERSION_TABLE)
-                .value(VERSION_TABLE_KEY, version)
+                .value(VERSION_TABLE_KEY, version.toString())
                 .value(VERSION_TABLE_ROW_TYPE, "hash")
                 .value(VERSION_TABLE_VALUE, changeHash);
 
+
         Update.Where updateState = QueryBuilder.update(VERSION_TABLE)
-                .with(QueryBuilder.set(VERSION_TABLE_VALUE, version))
+                .with(QueryBuilder.set(VERSION_TABLE_VALUE, ByteBuffer.allocate(4).putInt(0, version)))
                 .where(QueryBuilder.eq(VERSION_TABLE_KEY, "state"))
                 .and(QueryBuilder.eq(VERSION_TABLE_ROW_TYPE, "version"));
+
 
 
         try {

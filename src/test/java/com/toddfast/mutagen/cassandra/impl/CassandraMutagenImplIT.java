@@ -17,6 +17,7 @@ import com.toddfast.mutagen.Plan;
 import com.toddfast.mutagen.State;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import static org.junit.Assert.*;
 
@@ -93,7 +94,6 @@ public class CassandraMutagenImplIT {
 		assertEquals((state!=null ? state.getID() : (Integer)(-1)),(Integer)4);
 	}
 
-
 	@Test
 	public void testData() throws Exception {
 
@@ -142,7 +142,7 @@ public class CassandraMutagenImplIT {
 		System.out.println("Creating keyspace " + session + "...");
 
 		String create_keyspace = 
-				"CREATE keyspace " + KEY_SPACE
+				"CREATE keyspace IF NOT EXISTS " + KEY_SPACE
 				+ " WITH Replication = {'class': 'SimpleStrategy'" +
 				", 'replication_factor': '1'};";
 		
